@@ -1,0 +1,96 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Create Bastion host to access EKS worker nodes'
+
+Parameters:
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access into bastion host
+    Type: AWS::EC2::KeyPair::KeyName
+
+  InstanceType:
+    Description: Bastion host instance type
+    Type: String
+    Default: t2.small
+    AllowedValues: 
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium 
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  VPCStackName:
+    Description: >-
+      The name of CloudFormation stack creating the VPC
+    Type: String
+  
+  AllowSSHFrom:
+    Type: String
+    Description: Range of addresses allowed to SSH into Bastion
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Default: 0.0.0.0/0
+
+Mappings:
+  AMIMap:
+    us-east-1: 
+      ImageId: 'ami-0922553b7b0369273'
+    us-west-2: 
+      ImageId: 'ami-0d1000aff9a9bad89'
+    eu-west-1: 
+      ImageId: 'ami-0c21ae4a3bd190229'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'VPC Stack Name'
+        Parameters:
+        - VPCStackName
+      - Label:
+          default: 'Bastion host configuration'
+        Parameters:
+        - KeyName
+        - InstanceType
+        - AllowSSHFrom
+
+Resources:
+  PublicBastionSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow bastion to be accessed via SSH from certain IPs
+      VpcId: 
+        Fn::ImportValue: !Sub '${VPCStackName}-vpc-id'
+      SecurityGroupIngress:
+      - CidrIp: !Ref AllowSSHFrom
+        Description: !Sub "Allow ssh from ${AllowSSHFrom}"
+        FromPort: 22
+        ToPort: 22
+        IpProtocol: tcp
+      Tags:
+      - Key: Name 
+        Value: Allow ssh to EKS bastion
+
+  Bastion:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: 
+        Fn::FindInMap:
+        - AMIMap
+        - !Ref AWS::Region
+        - ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SubnetId:
+        Fn::ImportValue: !Sub '${VPCStackName}-bastion-subnet-id'
+      SecurityGroupIds:
+      - Fn::ImportValue: !Sub '${VPCStackName}-bastion-sg'
+      - !Ref PublicBastionSG
+      Tags:
+      - Key: Name 
+        Value: EKS Bastion
+
+Outputs:
+  BastionDNSName:
+    Description: >-
+      Bastion Host DNS Name
+    Value: !GetAtt Bastion.PublicDnsName

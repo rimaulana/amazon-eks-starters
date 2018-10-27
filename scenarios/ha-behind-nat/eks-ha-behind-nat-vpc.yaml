@@ -1,0 +1,486 @@
+--
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EKS VPC with public and private subnets spreads in 3 different AZs'
+
+Parameters:
+
+  VpcBlock:
+    Type: String
+    Default: 10.123.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  PublicSubnet01Block:
+    Type: String
+    Default: 10.123.61.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+
+  PublicSubnet02Block:
+    Type: String
+    Default: 10.123.62.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+
+  PublicSubnet03Block:
+    Type: String
+    Default: 10.123.63.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+
+  PrivateSubnet01Block:
+    Type: String
+    Default: 10.123.64.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for subnet 01 within the VPC
+
+  PrivateSubnet02Block:
+    Type: String
+    Default: 10.123.128.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for subnet 02 within the VPC
+
+  PrivateSubnet03Block:
+    Type: String
+    Default: 10.123.192.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for subnet 03 within the VPC
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "Worker Network Configuration"
+      Parameters:
+      - VpcBlock
+      - PublicSubnet01Block
+      - PublicSubnet02Block
+      - PublicSubnet03Block
+      - PrivateSubnet01Block
+      - PrivateSubnet02Block
+      - PrivateSubnet03Block
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:  !Ref VpcBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-on-${AWS::Region}'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  ElasticIPAZ1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGatewayAZ1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 
+        Fn::GetAtt: 
+        - ElasticIPAZ1
+        - AllocationId
+      SubnetId:
+        Ref: PublicSubnet01
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-nat-on-'
+            - Fn::Select:
+              - 0
+              - Fn::GetAZs: !Ref AWS::Region
+
+  ElasticIPAZ2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGatewayAZ2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 
+        Fn::GetAtt: 
+        - ElasticIPAZ2
+        - AllocationId
+      SubnetId:
+        Ref: PublicSubnet02
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-nat-on-'
+            - Fn::Select:
+              - 1
+              - Fn::GetAZs: !Ref AWS::Region
+
+  ElasticIPAZ3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NatGatewayAZ3:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 
+        Fn::GetAtt: 
+        - ElasticIPAZ3
+        - AllocationId
+      SubnetId:
+        Ref: PublicSubnet03
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-nat-on-'
+            - Fn::Select:
+              - 2
+              - Fn::GetAZs: !Ref AWS::Region
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-public-route-table-on-${AWS::Region}'
+      - Key: Network
+        Value: public
+  
+  PrivateRouteTableAZ1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-private-route-table-on-'
+            - Fn::Select:
+              - 0
+              - Fn::GetAZs: !Ref AWS::Region
+      - Key: Network
+        Value: private
+
+  PrivateRouteTableAZ2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-private-route-table-on-'
+            - Fn::Select:
+              - 1
+              - Fn::GetAZs: !Ref AWS::Region
+      - Key: Network
+        Value: private
+
+  PrivateRouteTableAZ3:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-private-route-table-on-'
+            - Fn::Select:
+              - 2
+              - Fn::GetAZs: !Ref AWS::Region
+      - Key: Network
+        Value: Private
+
+  PublicRoute:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  NatRouteAZ1:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAZ1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAZ1
+
+  NatRouteAZ2:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAZ2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAZ2
+
+  NatRouteAZ3:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableAZ3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayAZ3
+
+  PublicSubnet01:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Public Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      MapPublicIpOnLaunch: true
+      CidrBlock:
+        Ref: PublicSubnet01Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-public-subnet-on-'
+            - Fn::Select:
+              - 0
+              - Fn::GetAZs: !Ref AWS::Region
+
+  PublicSubnet02:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Public Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      MapPublicIpOnLaunch: true
+      CidrBlock:
+        Ref: PublicSubnet02Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-public-subnet-on-'
+            - Fn::Select:
+              - 1
+              - Fn::GetAZs: !Ref AWS::Region
+
+  PublicSubnet03:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Public Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 2 
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      MapPublicIpOnLaunch: true
+      CidrBlock:
+        Ref: PublicSubnet03Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-public-subnet-on-'
+            - Fn::Select:
+              - 2
+              - Fn::GetAZs: !Ref AWS::Region
+
+  PrivateSubnet01:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Subnet 01
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      CidrBlock:
+        Ref: PrivateSubnet01Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: kubernetes.io/role/internal-elb
+        Value: "1"
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-private-subnet-on-'
+            - Fn::Select:
+              - 0
+              - Fn::GetAZs: !Ref AWS::Region
+
+  PrivateSubnet02:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Subnet 02
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      CidrBlock:
+        Ref: PrivateSubnet02Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: kubernetes.io/role/internal-elb
+        Value: "1"
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-private-subnet-on-'
+            - Fn::Select:
+              - 0
+              - Fn::GetAZs: !Ref AWS::Region
+
+  PrivateSubnet03:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      Comment: Subnet 03
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - 2
+        - Fn::GetAZs:
+            Ref: AWS::Region
+      CidrBlock:
+        Ref: PrivateSubnet03Block
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: kubernetes.io/role/internal-elb
+        Value: "1"
+      - Key: Name
+        Value: 
+          Fn::Join:
+          - ""
+          - - !Sub '${AWS::StackName}-private-subnet-on-'
+            - Fn::Select:
+              - 0
+              - Fn::GetAZs: !Ref AWS::Region
+
+  PublicSubnet01RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet01
+      RouteTableId: !Ref PublicRouteTable
+    
+  PublicSubnet02RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet02
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet03RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet03
+      RouteTableId: !Ref PublicRouteTable
+
+  Subnet01RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet01
+      RouteTableId: !Ref PrivateRouteTableAZ1
+
+  Subnet02RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet02
+      RouteTableId: !Ref PrivateRouteTableAZ2
+
+  Subnet03RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet03
+      RouteTableId: !Ref PrivateRouteTableAZ3
+
+  ControlPlaneSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Cluster communication with worker nodes
+      VpcId: !Ref VPC
+
+Outputs:
+
+  EKSSubnetIds:
+    Description: >-
+      All subnets in the VPC that needs to be defined in EKS cluster creation
+    Value: 
+      Fn::Join:
+      - ","
+      - - !Ref PrivateSubnet01
+        - !Ref PrivateSubnet02
+        - !Ref PrivateSubnet03
+        - !Ref PublicSubnet01
+        - !Ref PublicSubnet02
+        - !Ref PublicSubnet03
+  
+  WorkerNodesSubnetIds:
+    Description: >-
+      Collection of private subnet id where worker node will be placed
+    Value:
+      Fn::Join:
+      - ','
+      - - !Ref PrivateSubnet01
+        - !Ref PrivateSubnet02
+        - !Ref PrivateSubnet03
+    Export:
+      Name: !Sub '${AWS::StackName}-private-subnet-ids'
+
+  BastionSubnetId:
+    Description: >-
+      Default subnet id where bastion host will be placed
+    Value: !Ref PublicSubnet01
+    Export:
+      Name: !Sub '${AWS::StackName}-bastion-subnet-id'
+
+  ContorlPlaneSecurityGroups:
+    Description: >-
+      Security group for the cluster control plane communication with worker nodes
+    Value: !Ref ControlPlaneSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-control-plane-sg'
+
+  VpcId:
+    Description: >-
+      Exported VPC id for EKS Cluster
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-vpc-id'
