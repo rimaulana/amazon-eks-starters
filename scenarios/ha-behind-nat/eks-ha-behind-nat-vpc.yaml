@@ -1,6 +1,7 @@
---
+---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Amazon EKS VPC with public and private subnets spreads in 3 different AZs'
+Description: >-
+  Amazon EKS VPC with public and private subnets spreads in 3 different AZs
 
 Parameters:
 
@@ -413,19 +414,19 @@ Resources:
       SubnetId: !Ref PublicSubnet03
       RouteTableId: !Ref PublicRouteTable
 
-  Subnet01RouteTableAssociation:
+  PrivateSubnet01RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet01
       RouteTableId: !Ref PrivateRouteTableAZ1
 
-  Subnet02RouteTableAssociation:
+  PrivateSubnet02RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet02
       RouteTableId: !Ref PrivateRouteTableAZ2
 
-  Subnet03RouteTableAssociation:
+  PrivateSubnet03RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet03
