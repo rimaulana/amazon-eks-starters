@@ -34,10 +34,15 @@ Mappings:
   AMIMap:
     us-east-1: 
       ImageId: 'ami-0922553b7b0369273'
+    us-east-2:
+      ImageId: 'ami-8c122be9'
     us-west-2: 
       ImageId: 'ami-0d1000aff9a9bad89'
     eu-west-1: 
       ImageId: 'ami-0c21ae4a3bd190229'
+    eu-north-1:
+      ImageId: 'ami-07ec6279'
+
 
 Metadata:
   AWS::CloudFormation::Interface:

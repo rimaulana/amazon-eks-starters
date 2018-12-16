@@ -114,16 +114,19 @@ Mappings:
   RegionMap:
     us-east-1:
       nogpu: ami-0a0b913ef3249b655
-      gpu: ami-0c974dde3f6d691a1
+      gpu: ami-08a0bb74d1c9a5e2f
     us-east-2:
-      nogpu: ami-0958a76db2d150238
-      gpu: ami-089849e811ace242f
+      nogpu: ami-053cbe66e0033ebcf
+      gpu: ami-04a758678ae5ebad5
     us-west-2:
-      nogpu: ami-0f54a2f7d2e9c88b3
-      gpu: ami-08156e8fd65879a13
+      nogpu: ami-094fa4044a2a3cf52
+      gpu: ami-014f4e495a19d3e4f
     eu-west-1:
-      nogpu: ami-00c3b2d35bddd4f5c
-      gpu: ami-0c3479bcd739094f0
+      nogpu: ami-0a9006fb385703b54
+      gpu: ami-050db3f5f9dbd4439
+    eu-north-1:
+      nogpu: ami-082e6cf1c07e60241
+      gpu: ami-69b03e17
 
 Metadata:
   AWS::CloudFormation::Interface:
