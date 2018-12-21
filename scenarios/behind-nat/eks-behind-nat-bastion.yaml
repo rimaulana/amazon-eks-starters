@@ -33,15 +33,23 @@ Parameters:
 Mappings:
   AMIMap:
     us-east-1: 
-      ImageId: 'ami-0922553b7b0369273'
+      ImageId: 'ami-009d6802948d06e52'
     us-east-2:
-      ImageId: 'ami-8c122be9'
+      ImageId: 'ami-02e680c4540db351e'
     us-west-2: 
-      ImageId: 'ami-0d1000aff9a9bad89'
+      ImageId: 'ami-01bbe152bf19d0289'
     eu-west-1: 
-      ImageId: 'ami-0c21ae4a3bd190229'
+      ImageId: 'ami-09693313102a30b2c'
     eu-north-1:
       ImageId: 'ami-07ec6279'
+    eu-central-1:
+      ImageId: 'ami-034fffcc6a0063961'
+    ap-southeast-1:
+      ImageId: 'ami-0b84d2c53ad5250c2'
+    ap-southeast-2:
+      ImageId: 'ami-08589eca6dcc9b39c'
+    ap-northeast-1:
+      ImageId: 'ami-0a2de1c3b415889d2'
 
 
 Metadata:
