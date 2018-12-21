@@ -133,6 +133,9 @@ Mappings:
     ap-southeast-2:
       nogpu: ami-03297c04f71690a76
       gpu: ami-0da8916a67c116ace
+    ap-northeast-1:
+      nogpu: ami-063650732b3e8b38c
+      gpu: ami-080be783089a635dd
 
 Metadata:
   AWS::CloudFormation::Interface:
