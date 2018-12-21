@@ -124,6 +124,9 @@ Mappings:
     eu-west-1:
       nogpu: ami-0a9006fb385703b54
       gpu: ami-050db3f5f9dbd4439
+    eu-central-1:
+      nogpu: ami-0ce0ec06e682ee10e
+      gpu: ami-017912381e1ebb308
     eu-north-1:
       nogpu: ami-082e6cf1c07e60241
       gpu: ami-69b03e17
