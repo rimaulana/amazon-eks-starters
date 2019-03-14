@@ -3,46 +3,65 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Amazon EKS - Proxy infrastructure'
 
 Parameters:
-  VPCInput:
+  VpcId:
     Type: AWS::EC2::VPC::Id
-  PrimaryCIDR:
+  PrimaryVpcCidr:
     Type: String
     Default: 10.123.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-  SecondaryCIDR:
+  SecondaryVpcCidr:
     Type: String
     Default: 100.64.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-  AllowedCIDR:
+  AllowedSshCidr:
     Type: String
     Default: 0.0.0.0/0
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
   PublicSubnets:
-    Type: List<AWS::EC2::Subnet::Id>
+    Type: String
+    Description: Multiple Subnet Ids separated by comma sg-123,sg456
   PrivateSubnets:
-    Type: List<AWS::EC2::Subnet::Id>
+    Type: String
+    Description: Multiple Subnet Ids separated by comma sg-123,sg456
+  ProxyImageId:
+    Type: AWS::EC2::Image::Id
   KeyName:
     Type: String
     Default: rmaulan-testbed
+  ProxyPort:
+    Type: Number
+    Default: 3128
+  ProxyNumber:
+    Type: Number
+    Default: 3
+  ProxyInstanceType:
+    Type: String
+    Default: t2.nano
+    AllowedValues: 
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium 
 
 Resources:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow traffic from internal VPC to access proxy servers
-      VpcId: !Ref VPCInput
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
-      - CidrIp: !Ref PrimaryCIDR
+      - CidrIp: !Ref PrimaryVpcCidr
         Description: Allow internal traffic to port 3128 from primary CIDR
-        FromPort: 3128
-        ToPort: 3128
+        FromPort: !Ref ProxyPort
+        ToPort: !Ref ProxyPort
         IpProtocol: TCP
-      - CidrIp: !Ref SecondaryCIDR
+      - CidrIp: !Ref SecondaryVpcCidr
         Description: Allow internal traffic to port 3128 from secondary CIDR
-        FromPort: 3128
-        ToPort: 3128
+        FromPort: !Ref ProxyPort
+        ToPort: !Ref ProxyPort
         IpProtocol: TCP
-      - CidrIp: !Ref AllowedCIDR
+      - CidrIp: !Ref AllowedSshCidr
         Description: Allow SSH access from allowed CIDR range
         FromPort: 22
         ToPort: 22
@@ -58,42 +77,48 @@ Resources:
   ProxyASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
-      DesiredCapacity: '3'
+      DesiredCapacity: !Ref ProxyNumber
       LaunchConfigurationName: !Ref ProxyLaunchConfig
       TargetGroupARNs:
       - !Ref ProxyTargetGroup
-      MinSize: '3'
-      MaxSize: '6'
-      VPCZoneIdentifier: !Ref PublicSubnets
+      MinSize: !Ref ProxyNumber
+      MaxSize: !Ref ProxyNumber
+      VPCZoneIdentifier:
+        Fn::Split:
+        - ','
+        - !Ref PublicSubnets
       Tags:
       - Key: Name
         Value: "proxy-asg"
         PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
-        Count: 1
+        Count: !Ref ProxyNumber
         Timeout: PT10M
     
   NetworkLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internal
-      Subnets: !Ref PrivateSubnets
+      Subnets:
+        Fn::Split:
+        - ','
+        - !Ref PrivateSubnets
       Type: network
   
   ProxyTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      Port: 3128
+      Port: !Ref ProxyPort
       Protocol: TCP
       TargetType: instance
-      VpcId: !Ref VPCInput
+      VpcId: !Ref VpcId
   
   NLBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref NetworkLoadBalancer
-      Port: 3128
+      Port: !Ref ProxyPort
       Protocol: TCP
       DefaultActions:
         - Type: forward
@@ -119,9 +144,9 @@ Resources:
             /home/ec2-user/update-config.sh:
               content: !Sub |
                 #!/bin/bash
-                sed -i 's/^Port 8888/Port 3128/' /etc/tinyproxy/tinyproxy.conf
-                echo "Allow ${PrimaryCIDR}" >> /etc/tinyproxy/tinyproxy.conf
-                echo "Allow ${SecondaryCIDR}" >> /etc/tinyproxy/tinyproxy.conf
+                sed -i 's/^Port 8888/Port ${ProxyPort}/' /etc/tinyproxy/tinyproxy.conf
+                echo "Allow ${PrimaryVpcCidr}" >> /etc/tinyproxy/tinyproxy.conf
+                echo "Allow ${SecondaryVpcCidr}" >> /etc/tinyproxy/tinyproxy.conf
               mode: '000744'
               owner: root
               group: root
@@ -137,8 +162,8 @@ Resources:
                 ensureRunning: true 
     Properties:
       AssociatePublicIpAddress: true
-      ImageId: ami-02da3a138888ced85 
-      InstanceType: t2.nano
+      ImageId: !Ref ProxyImageId
+      InstanceType: !Ref ProxyInstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
       - !Ref SecurityGroup
@@ -155,5 +180,10 @@ Resources:
             set -o xtrace
             /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ProxyLaunchConfig --configsets install --region ${AWS::Region}
             /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ProxyASG --region ${AWS::Region}
+
+Outputs:
+  ProxyAddr:
+    Description: NLB private DNS name
+    Value: !GetAtt NetworkLoadBalancer.DNSName
             
       

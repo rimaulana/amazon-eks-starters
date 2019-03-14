@@ -1,0 +1,208 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Main Stack for EKS with proxy'
+
+Parameters:
+
+  ClusterName:
+    Type: String
+
+  PrimaryVpcCidr:
+    Type: String
+    Default: 10.123.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  PublicSubnet01Block:
+    Type: String
+    Default: 10.123.61.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+
+  PublicSubnet02Block:
+    Type: String
+    Default: 10.123.62.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+
+  PublicSubnet03Block:
+    Type: String
+    Default: 10.123.63.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+
+  PrivateSubnet01Block:
+    Type: String
+    Default: 10.123.64.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for subnet 01 within the VPC
+
+  PrivateSubnet02Block:
+    Type: String
+    Default: 10.123.128.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for subnet 02 within the VPC
+
+  PrivateSubnet03Block:
+    Type: String
+    Default: 10.123.192.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for subnet 03 within the VPC
+  
+  SecondaryVpcCidr:
+    Type: String
+    Default: 100.64.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Additional VPC CidrBlock
+
+  AdditionalSubnet01Block:
+    Type: String
+    Default: 100.64.0.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for additional subnet 01 within the VPC
+
+  AdditionalSubnet02Block:
+    Type: String
+    Default: 100.64.64.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for additional subnet 02 within the VPC
+
+  AdditionalSubnet03Block:
+    Type: String
+    Default: 100.64.128.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: CidrBlock for additional subnet 03 within the VPC
+  
+  AllowedSshCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+
+  ProxyPort:
+    Type: Number
+    Default: 3128
+
+  ProxyNumber:
+    Type: Number
+    Default: 3
+
+  ProxyInstanceType:
+    Type: String
+    Default: t2.nano
+    AllowedValues: 
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+  
+  KeyName:
+    Type: String
+    Default: rmaulan-testbed
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "EKS Cluster Configuration"
+      Parameters:
+      - ClusterName
+    - Label:
+        default: "Proxy Configuration"
+      Parameters:
+      - ProxyInstanceType
+      - ProxyNumber
+      - ProxyPort
+    - Label:
+        default: "VPC Configuration"
+      Parameters:
+      - ClusterName
+      - PrimaryVpcCidr
+      - PublicSubnet01Block
+      - PublicSubnet02Block
+      - PublicSubnet03Block
+      - PrivateSubnet01Block
+      - PrivateSubnet02Block
+      - PrivateSubnet03Block
+      - SecondaryVpcCidr
+      - AdditionalSubnet01Block
+      - AdditionalSubnet02Block
+      - AdditionalSubnet03Block
+    - Label:
+        default: "Accessibility"
+      Parameters:
+      - AllowedSshCidr
+      - KeyName
+
+Mappings:
+  ProxyImage:
+    us-west-2: 
+      ImageId: 'ami-01bbe152bf19d0289'
+    us-east-1: 
+      ImageId: 'ami-009d6802948d06e52'
+    us-east-2:
+      ImageId: 'ami-02e680c4540db351e'
+    eu-central-1:
+      ImageId: 'ami-034fffcc6a0063961'
+    eu-north-1:
+      ImageId: 'ami-07ec6279'
+    eu-west-1: 
+      ImageId: 'ami-09693313102a30b2c'
+    ap-northeast-1:
+      ImageId: 'ami-0a2de1c3b415889d2'
+    ap-northeast-2:
+      ImageId: 'ami-018a9a930060d38aa'
+    ap-southeast-1:
+      ImageId: 'ami-0b84d2c53ad5250c2'
+    ap-southeast-2:
+      ImageId: 'ami-08589eca6dcc9b39c'
+
+Resources:
+  Vpc:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./vpc.yaml
+      Parameters:
+        ClusterName: !Ref ClusterName
+        PrimaryVpcCidr: !Ref PrimaryVpcCidr
+        SecondaryVpcCidr: !Ref SecondaryVpcCidr
+        PublicSubnet01Block: !Ref PublicSubnet01Block
+        PublicSubnet02Block: !Ref PublicSubnet02Block
+        PublicSubnet03Block: !Ref PublicSubnet03Block
+        PrivateSubnet01Block: !Ref PrivateSubnet01Block
+        PrivateSubnet02Block: !Ref PrivateSubnet02Block
+        PrivateSubnet03Block: !Ref PrivateSubnet03Block
+        AdditionalSubnet01Block: !Ref AdditionalSubnet01Block
+        AdditionalSubnet02Block: !Ref AdditionalSubnet02Block
+        AdditionalSubnet03Block: !Ref AdditionalSubnet03Block
+  
+  Proxy:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./proxy.yaml
+      Parameters:
+        VpcId: 
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.Id
+        PrimaryVpcCidr: !Ref PrimaryVpcCidr
+        SecondaryVpcCidr: !Ref SecondaryVpcCidr
+        AllowedSshCidr: !Ref AllowedSshCidr
+        PublicSubnets: 
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.PublicSubnetIds
+        PrivateSubnets: 
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.PrivateSubnetIds
+        KeyName: !Ref KeyName
+        ProxyPort: !Ref ProxyPort
+        ProxyNumber: !Ref ProxyNumber
+        ProxyInstanceType: !Ref ProxyInstanceType
+        ProxyImageId:
+          Fn::FindInMap:
+          - ProxyImage
+          - !Ref AWS::Region
+          - ImageId
+      
