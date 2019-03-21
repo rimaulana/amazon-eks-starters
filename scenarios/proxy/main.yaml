@@ -6,6 +6,14 @@ Parameters:
 
   ClusterName:
     Type: String
+  
+  K8sVersion:
+    Type: String
+    Default: '11'
+    Description: Kubernetes version 1.X
+    AllowedValues:
+    - '10'
+    - '11'
 
   PrimaryVpcCidr:
     Type: String
@@ -96,9 +104,103 @@ Parameters:
     - t2.small
     - t2.medium
   
+  ProxyAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  
   KeyName:
     Type: String
     Default: rmaulan-testbed
+  
+  NodeGPUSupport:
+    Type: String
+    Description: GPU support on worker nodes
+    Default: nogpu
+    AllowedValues:
+    - nogpu
+    - gpu
+
+  NodeInstanceType:
+    Description: EC2 instance type for the node instances
+    Type: String
+    Default: t2.medium
+    AllowedValues:
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
+    - t2.2xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - m5.large
+    - m5.xlarge
+    - m5.2xlarge
+    - m5.4xlarge
+    - m5.12xlarge
+    - m5.24xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - c5.large
+    - c5.xlarge
+    - c5.2xlarge
+    - c5.4xlarge
+    - c5.9xlarge
+    - c5.18xlarge
+    - i3.large
+    - i3.xlarge
+    - i3.2xlarge
+    - i3.4xlarge
+    - i3.8xlarge
+    - i3.16xlarge
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - r4.4xlarge
+    - r4.8xlarge
+    - r4.16xlarge
+    - x1.16xlarge
+    - x1.32xlarge
+    - p2.xlarge
+    - p2.8xlarge
+    - p2.16xlarge
+    - p3.2xlarge
+    - p3.8xlarge
+    - p3.16xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  NodeAutoScalingGroupMinSize:
+    Type: Number
+    Description: Minimum size of Node Group ASG.
+    Default: 1
+
+  NodeAutoScalingGroupMaxSize:
+    Type: Number
+    Description: Maximum size of Node Group ASG.
+    Default: 100 
+
+  NodeVolumeSize:
+    Type: Number
+    Description: Node volume size
+    Default: 20
+  
+  BootstrapArguments:
+    Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
+    Default: ""
+    Type: String
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -107,12 +209,16 @@ Metadata:
         default: "EKS Cluster Configuration"
       Parameters:
       - ClusterName
+      - K8sVersion
+
     - Label:
         default: "Proxy Configuration"
       Parameters:
+      - ProxyAmiId
       - ProxyInstanceType
       - ProxyNumber
       - ProxyPort
+
     - Label:
         default: "VPC Configuration"
       Parameters:
@@ -128,34 +234,22 @@ Metadata:
       - AdditionalSubnet01Block
       - AdditionalSubnet02Block
       - AdditionalSubnet03Block
+
+    - Label:
+        default: 'Worker Node Configuration'
+      Parameters:
+      - NodeAutoScalingGroupMinSize
+      - NodeAutoScalingGroupMaxSize
+      - NodeInstanceType
+      - NodeGPUSupport
+      - NodeVolumeSize
+      - BootstrapArguments
+
     - Label:
         default: "Accessibility"
       Parameters:
       - AllowedSshCidr
       - KeyName
-
-Mappings:
-  ProxyImage:
-    us-west-2: 
-      ImageId: 'ami-01bbe152bf19d0289'
-    us-east-1: 
-      ImageId: 'ami-009d6802948d06e52'
-    us-east-2:
-      ImageId: 'ami-02e680c4540db351e'
-    eu-central-1:
-      ImageId: 'ami-034fffcc6a0063961'
-    eu-north-1:
-      ImageId: 'ami-07ec6279'
-    eu-west-1: 
-      ImageId: 'ami-09693313102a30b2c'
-    ap-northeast-1:
-      ImageId: 'ami-0a2de1c3b415889d2'
-    ap-northeast-2:
-      ImageId: 'ami-018a9a930060d38aa'
-    ap-southeast-1:
-      ImageId: 'ami-0b84d2c53ad5250c2'
-    ap-southeast-2:
-      ImageId: 'ami-08589eca6dcc9b39c'
 
 Resources:
   Vpc:
@@ -181,6 +275,7 @@ Resources:
     Properties:
       TemplateURL: ./proxy.yaml
       Parameters:
+        ClusterName: !Ref ClusterName
         VpcId: 
           Fn::GetAtt:
           - Vpc
@@ -200,9 +295,87 @@ Resources:
         ProxyPort: !Ref ProxyPort
         ProxyNumber: !Ref ProxyNumber
         ProxyInstanceType: !Ref ProxyInstanceType
-        ProxyImageId:
-          Fn::FindInMap:
-          - ProxyImage
-          - !Ref AWS::Region
-          - ImageId
+        ProxyImageId: !Ref ProxyAmiId
+  
+  WorkerNodes:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - EKSCluster
+    Properties:
+      TemplateURL: ./worker.yaml
+      Parameters:
+        ClusterName: !Ref ClusterName
+        ClusterControlPlaneSecurityGroup:
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.ContorlPlaneSecurityGroups
+        K8sVersion: !Ref K8sVersion
+        VpcId:
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.Id
+        PrivateSubnets:
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.PrivateSubnetIds
+        ClusterCidr:
+          Fn::Join:
+            - ','
+            - - !Ref PrimaryVpcCidr
+              - !Ref SecondaryVpcCidr
+        ProxyUrl:
+          Fn::GetAtt:
+          - Proxy
+          - Outputs.ProxyAddr
+        ProxyPort: !Ref ProxyPort
+        ProxySecurityGroup:
+          Fn::GetAtt:
+          - Proxy
+          - Outputs.ProxySecurityGroup
+        NodeAutoScalingGroupMinSize: !Ref NodeAutoScalingGroupMinSize
+        NodeAutoScalingGroupMaxSize: !Ref NodeAutoScalingGroupMaxSize
+        NodeInstanceType: !Ref NodeInstanceType
+        NodeGPUSupport: !Ref NodeGPUSupport
+        NodeVolumeSize: !Ref NodeVolumeSize
+        KeyName: !Ref KeyName
+        BootstrapArguments: !Ref BootstrapArguments
+
+  EKSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - eks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+      - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+
+  EKSCluster:
+    Type: AWS::EKS::Cluster
+    Properties:
+      Name: !Ref ClusterName
+      RoleArn: !GetAtt EKSServiceRole.Arn
+      Version:
+        Fn::Join:
+        - '.'
+        - - '1'
+          - !Ref K8sVersion
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+        - Fn::GetAtt:
+          - Vpc
+          - Outputs.ContorlPlaneSecurityGroups
+        SubnetIds: 
+          Fn::Split:
+          - ','
+          - Fn::GetAtt:
+            - Vpc
+            - Outputs.EKSSubnetIds
       

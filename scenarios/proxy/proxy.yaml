@@ -3,6 +3,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Amazon EKS - Proxy infrastructure'
 
 Parameters:
+  ClusterName:
+    Type: String
   VpcId:
     Type: AWS::EC2::VPC::Id
   PrimaryVpcCidr:
@@ -72,7 +74,7 @@ Resources:
         Description: Default allow all outbound connection
       Tags:
       - Key: Name
-        Value: proxy-security-group
+        Value: !Sub '${ClusterName}-proxy-security-group'
 
   ProxyASG:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -89,7 +91,10 @@ Resources:
         - !Ref PublicSubnets
       Tags:
       - Key: Name
-        Value: "proxy-asg"
+        Value: !Sub '${ClusterName}-proxy-asg'
+        PropagateAtLaunch: true
+      - Key: auto-delete
+        Value: "no"
         PropagateAtLaunch: true
     CreationPolicy:
       ResourceSignal:
@@ -105,6 +110,12 @@ Resources:
         - ','
         - !Ref PrivateSubnets
       Type: network
+      Tags:
+      - Key: auto-delete
+        Value: "no"
+      - Key: Name
+        Value: !Sub '${ClusterName}-proxy-nlb'
+
   
   ProxyTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -113,6 +124,11 @@ Resources:
       Protocol: TCP
       TargetType: instance
       VpcId: !Ref VpcId
+      Tags:
+      - Key: Name
+        Value: !Sub '${ClusterName}-proxy-target-group'
+      - Key: auto-delete
+        Value: "no"
   
   NLBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -121,8 +137,8 @@ Resources:
       Port: !Ref ProxyPort
       Protocol: TCP
       DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref ProxyTargetGroup
+      - Type: forward
+        TargetGroupArn: !Ref ProxyTargetGroup
   
   ProxyLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
@@ -185,5 +201,8 @@ Outputs:
   ProxyAddr:
     Description: NLB private DNS name
     Value: !GetAtt NetworkLoadBalancer.DNSName
+  ProxySecurityGroup:
+    Description: Security group on proxy instances
+    Value: !Ref SecurityGroup
             
       
