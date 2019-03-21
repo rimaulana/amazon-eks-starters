@@ -1,0 +1,208 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon EKS - Proxy infrastructure'
+
+Parameters:
+  ClusterName:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrimaryVpcCidr:
+    Type: String
+    Default: 10.123.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+  SecondaryVpcCidr:
+    Type: String
+    Default: 100.64.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+  AllowedSshCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+  PublicSubnets:
+    Type: String
+    Description: Multiple Subnet Ids separated by comma sg-123,sg456
+  PrivateSubnets:
+    Type: String
+    Description: Multiple Subnet Ids separated by comma sg-123,sg456
+  ProxyImageId:
+    Type: AWS::EC2::Image::Id
+  KeyName:
+    Type: String
+    Default: rmaulan-testbed
+  ProxyPort:
+    Type: Number
+    Default: 3128
+  ProxyNumber:
+    Type: Number
+    Default: 3
+  ProxyInstanceType:
+    Type: String
+    Default: t2.nano
+    AllowedValues: 
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium 
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic from internal VPC to access proxy servers
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - CidrIp: !Ref PrimaryVpcCidr
+        Description: Allow internal traffic to port 3128 from primary CIDR
+        FromPort: !Ref ProxyPort
+        ToPort: !Ref ProxyPort
+        IpProtocol: TCP
+      - CidrIp: !Ref SecondaryVpcCidr
+        Description: Allow internal traffic to port 3128 from secondary CIDR
+        FromPort: !Ref ProxyPort
+        ToPort: !Ref ProxyPort
+        IpProtocol: TCP
+      - CidrIp: !Ref AllowedSshCidr
+        Description: Allow SSH access from allowed CIDR range
+        FromPort: 22
+        ToPort: 22
+        IpProtocol: TCP
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: '-1'
+        Description: Default allow all outbound connection
+      Tags:
+      - Key: Name
+        Value: !Sub '${ClusterName}-proxy-security-group'
+
+  ProxyASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: !Ref ProxyNumber
+      LaunchConfigurationName: !Ref ProxyLaunchConfig
+      TargetGroupARNs:
+      - !Ref ProxyTargetGroup
+      MinSize: !Ref ProxyNumber
+      MaxSize: !Ref ProxyNumber
+      VPCZoneIdentifier:
+        Fn::Split:
+        - ','
+        - !Ref PublicSubnets
+      Tags:
+      - Key: Name
+        Value: !Sub '${ClusterName}-proxy-asg'
+        PropagateAtLaunch: true
+      - Key: auto-delete
+        Value: "no"
+        PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ProxyNumber
+        Timeout: PT10M
+    
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      Subnets:
+        Fn::Split:
+        - ','
+        - !Ref PrivateSubnets
+      Type: network
+      Tags:
+      - Key: auto-delete
+        Value: "no"
+      - Key: Name
+        Value: !Sub '${ClusterName}-proxy-nlb'
+
+  
+  ProxyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: !Ref ProxyPort
+      Protocol: TCP
+      TargetType: instance
+      VpcId: !Ref VpcId
+      Tags:
+      - Key: Name
+        Value: !Sub '${ClusterName}-proxy-target-group'
+      - Key: auto-delete
+        Value: "no"
+  
+  NLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref NetworkLoadBalancer
+      Port: !Ref ProxyPort
+      Protocol: TCP
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref ProxyTargetGroup
+  
+  ProxyLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          install:
+          - enable_epel
+          - install
+        enable_epel:
+          commands:
+            01_enable_epel:
+              command: yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        install:
+          packages:
+            yum:
+              tinyproxy: []
+          files:
+            /home/ec2-user/update-config.sh:
+              content: !Sub |
+                #!/bin/bash
+                sed -i 's/^Port 8888/Port ${ProxyPort}/' /etc/tinyproxy/tinyproxy.conf
+                echo "Allow ${PrimaryVpcCidr}" >> /etc/tinyproxy/tinyproxy.conf
+                echo "Allow ${SecondaryVpcCidr}" >> /etc/tinyproxy/tinyproxy.conf
+              mode: '000744'
+              owner: root
+              group: root
+          commands:
+            01_update_config:
+              command: /bin/bash /home/ec2-user/update-config.sh
+            02_remove_updater:
+              command: rm /home/ec2-user/update-config.sh
+          services:
+            sysvinit:
+              tinyproxy:
+                enabled: true
+                ensureRunning: true 
+    Properties:
+      AssociatePublicIpAddress: true
+      ImageId: !Ref ProxyImageId
+      InstanceType: !Ref ProxyInstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+      - !Ref SecurityGroup
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            VolumeType: gp2
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            set -o xtrace
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource ProxyLaunchConfig --configsets install --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ProxyASG --region ${AWS::Region}
+
+Outputs:
+  ProxyAddr:
+    Description: NLB private DNS name
+    Value: !GetAtt NetworkLoadBalancer.DNSName
+  ProxySecurityGroup:
+    Description: Security group on proxy instances
+    Value: !Ref SecurityGroup
+            
+      
