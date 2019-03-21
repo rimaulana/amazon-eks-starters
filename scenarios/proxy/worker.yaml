@@ -6,51 +6,55 @@ Parameters:
   K8sVersion:
     Type: String
     Default: '11'
-    Description: Kubernetes version 1.X
+    Description: Choose Kubernetes version 1.X
     AllowedValues:
     - '10'
     - '11'
 
   VpcId:
     Type: AWS::EC2::VPC::Id
+    Description: Define VPC ID where worker nodes will be deployed
   
   ClusterControlPlaneSecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Control plane security group
+    Description: Choose security group uses by EKS control plane
 
   PrivateSubnets:
     Type: String
-    Description: Multiple Subnet Ids separated by comma subnet-123,subnet-456
+    Description: Define private subnets on VPC for proxy server, multiple Subnet Ids separated by comma subnet-123,subnet-456
 
   ClusterCidr:
     Type: String
-    Default: Multiple Cluster CIDR are separated by comma eg. 172.16.0.0/16,10.0.0.0/16
+    Description: Define VPC CIDRs, multiple CIDRs are separated by a comma eg. 172.16.0.0/16,10.0.0.0/16
 
   ProxyUrl:
     Type: String
+    Description: Define proxy server NLB URL
 
   ProxyPort:
     Type: Number
     Default: 3128
+    Description: Define the port number on proxy server for proxy server process to open and listen
 
   ProxySecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Proxy security group
+    Description: Define proxy's security group, this is required to allow SSH access to worker nodes from proxy server
 
   KeyName:
-    Description: The EC2 Key Pair to allow SSH access to the instances
+    Description: SSH key name to enable SSH access to proxy server and worker nodes
     Type: AWS::EC2::KeyPair::KeyName
+    Default: rmaulan-testbed
 
   NodeGPUSupport:
     Type: String
-    Description: GPU support on worker nodes
+    Description: SSH key name to enable SSH access to proxy server and worker nodes
     Default: nogpu
     AllowedValues:
     - nogpu
     - gpu
 
   NodeInstanceType:
-    Description: EC2 instance type for the node instances
+    Description: Define EC2 instance type for EKS worker node
     Type: String
     Default: t2.medium
     AllowedValues:
@@ -113,21 +117,21 @@ Parameters:
 
   NodeAutoScalingGroupMinSize:
     Type: Number
-    Description: Minimum size of Node Group ASG.
+    Description: Minimum number of worker node in the cluster.
     Default: 1
 
   NodeAutoScalingGroupMaxSize:
     Type: Number
-    Description: Maximum size of Node Group ASG.
+    Description: Maximum number of worker node in the cluster.
     Default: 100 
 
   NodeVolumeSize:
     Type: Number
-    Description: Node volume size
+    Description: Define the size of worker node storage
     Default: 20
 
   ClusterName:
-    Description: The cluster name provided when the cluster was created. If it is incorrect, nodes will not be able to join the cluster.
+    Description: Give the name of EKS cluster. If it is incorrect, nodes will not be able to join the cluster.
     Type: String
 
   BootstrapArguments:
@@ -139,11 +143,11 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: 'EKS Cluster'
+          default: 'EKS Cluster Configurations'
         Parameters:
         - ClusterName
-        - ClusterControlPlaneSecurityGroup
         - K8sVersion
+        - ClusterControlPlaneSecurityGroup
 
       - Label:
           default: 'VPC Configurations'
@@ -169,6 +173,11 @@ Metadata:
         - NodeVolumeSize
         - KeyName
         - BootstrapArguments
+      
+      - Label:
+          default: "EC2 Instance Accessibility"
+        Parameters:
+        - KeyName
 
 Resources:
   NodeInstanceProfile:

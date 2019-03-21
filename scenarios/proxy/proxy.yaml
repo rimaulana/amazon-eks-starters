@@ -5,46 +5,98 @@ Description: 'Amazon EKS - Proxy infrastructure'
 Parameters:
   ClusterName:
     Type: String
+    Description: Give the name of EKS cluster
+
   VpcId:
     Type: AWS::EC2::VPC::Id
+    Description: Define VPC ID where proxy servers will be deployed
+
   PrimaryVpcCidr:
     Type: String
     Default: 10.123.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define primary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
   SecondaryVpcCidr:
     Type: String
     Default: 100.64.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define secondary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
   AllowedSshCidr:
     Type: String
     Default: 0.0.0.0/0
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the CIDR block where proxy server will open its SSH port for.
+
   PublicSubnets:
     Type: String
-    Description: Multiple Subnet Ids separated by comma sg-123,sg456
+    Description: Define public subnets on VPC for proxy server, multiple Subnet Ids separated by a comma subnet-123,subnet-456
+
   PrivateSubnets:
     Type: String
-    Description: Multiple Subnet Ids separated by comma sg-123,sg456
-  ProxyImageId:
+    Description: Define private subnets on VPC for proxy server, multiple Subnet Ids separated by a comma subnet-123,subnet-456
+
+  ProxyAmiId:
     Type: AWS::EC2::Image::Id
+    Description: Define AWS Linux 2 ImageId uses to create proxy server
+
   KeyName:
     Type: String
     Default: rmaulan-testbed
+    Description: SSH key name to enable SSH access to proxy server and worker nodes
+
   ProxyPort:
     Type: Number
     Default: 3128
+    Description: Define the port number on proxy server for proxy server process to open and listen
+
   ProxyNumber:
     Type: Number
     Default: 3
+    Description: Define the number of proxy server serving in the cluster.
+
   ProxyInstanceType:
     Type: String
     Default: t2.nano
+    Description: Choose proxy server instance type.
     AllowedValues: 
     - t1.micro
     - t2.nano
     - t2.micro
     - t2.small
     - t2.medium 
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "EKS Cluster Configurations"
+      Parameters:
+      - ClusterName
+
+    - Label:
+        default: "VPC Configurations"
+      Parameters:
+      - VpcId
+      - PrimaryVpcCidr
+      - SecondaryVpcCidr
+      - PublicSubnets
+      - PrivateSubnets
+
+    - Label:
+        default: "Proxy Configurations"
+      Parameters:
+      - ProxyAmiId
+      - ProxyInstanceType
+      - ProxyNumber
+      - ProxyPort
+    
+    - Label:
+        default: "EC2 Instance Accessibility"
+      Parameters:
+      - AllowedSshCidr
+      - KeyName
 
 Resources:
   SecurityGroup:
@@ -116,7 +168,6 @@ Resources:
       - Key: Name
         Value: !Sub '${ClusterName}-proxy-nlb'
 
-  
   ProxyTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -178,7 +229,7 @@ Resources:
                 ensureRunning: true 
     Properties:
       AssociatePublicIpAddress: true
-      ImageId: !Ref ProxyImageId
+      ImageId: !Ref ProxyAmiId
       InstanceType: !Ref ProxyInstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
