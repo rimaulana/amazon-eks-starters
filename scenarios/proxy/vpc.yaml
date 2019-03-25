@@ -7,80 +7,85 @@ Parameters:
 
   ClusterName:
     Type: String
+    Description: Give the name of EKS cluster
 
   PrimaryVpcCidr:
     Type: String
     Default: 10.123.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+    Description: Define primary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
 
   PublicSubnet01Block:
     Type: String
     Default: 10.123.61.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+    Description: Define the first CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
 
   PublicSubnet02Block:
     Type: String
     Default: 10.123.62.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+    Description: Define the second CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
 
   PublicSubnet03Block:
     Type: String
     Default: 10.123.63.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+    Description: Define the third CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
 
   PrivateSubnet01Block:
     Type: String
     Default: 10.123.64.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for subnet 01 within the VPC
+    Description: Define the first CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
 
   PrivateSubnet02Block:
     Type: String
     Default: 10.123.128.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for subnet 02 within the VPC
+    Description: Define the second CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
 
   PrivateSubnet03Block:
     Type: String
     Default: 10.123.192.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for subnet 03 within the VPC
+    Description: Define the third CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
   
   SecondaryVpcCidr:
     Type: String
     Default: 100.64.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: Additional VPC CidrBlock
+    Description: Define secondary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
 
   AdditionalSubnet01Block:
     Type: String
     Default: 100.64.0.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for additional subnet 01 within the VPC
+    Description: Define the first CIDR block on secondary VPC CIDR for private subnet for additional pod networking
 
   AdditionalSubnet02Block:
     Type: String
     Default: 100.64.64.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for additional subnet 02 within the VPC
+    Description: Define the second CIDR block on secondary VPC CIDR for private subnet for additional pod networking
 
   AdditionalSubnet03Block:
     Type: String
     Default: 100.64.128.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for additional subnet 03 within the VPC
+    Description: Define the third CIDR block on secondary VPC CIDR for private subnet for additional pod networking
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: "Worker Network Configuration"
+        default: "EKS Cluster Configurations"
       Parameters:
       - ClusterName
+
+    - Label:
+        default: "VPC Configurations"
+      Parameters:
       - PrimaryVpcCidr
       - PublicSubnet01Block
       - PublicSubnet02Block
