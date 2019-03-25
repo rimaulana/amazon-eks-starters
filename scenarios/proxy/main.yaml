@@ -304,7 +304,7 @@ Resources:
         ProxyPort: !Ref ProxyPort
         ProxyNumber: !Ref ProxyNumber
         ProxyInstanceType: !Ref ProxyInstanceType
-        ProxyImageId: !Ref ProxyAmiId
+        ProxyAmiId: !Ref ProxyAmiId
       Tags:
       - Key: auto-delete
         Value: "no"
@@ -393,4 +393,13 @@ Resources:
           - Fn::GetAtt:
             - Vpc
             - Outputs.EKSSubnetIds
+
+Outputs:
+  ProxyUrl:
+    Description: HTTP Proxy URL
+    Value: !Sub 'http://${Proxy.Outputs.ProxyAddr}:${ProxyPort}'
+  
+  WorkerNodeInstanceRole:
+    Description: Node instance role to be added to aws-auth configMap
+    Value: !Sub '${WorkerNodes.Outputs.NodeInstanceRole}'
       
