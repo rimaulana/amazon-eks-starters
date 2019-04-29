@@ -1,0 +1,22 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      app: guestbook
+  template:
+    metadata:
+      labels:
+        app: guestbook
+    spec:
+      containers:
+      - name: guestbook
+        image: {{ .Values.frontend.image }}:{{ .Values.frontend.version }}
+        ports:
+        - name: http-server
+          containerPort: 3000

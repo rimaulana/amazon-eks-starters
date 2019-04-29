@@ -5,86 +5,96 @@ Description: >-
 
 Parameters:
 
-  VpcBlock:
+  ClusterName:
+    Type: String
+    Description: Give the name of EKS cluster
+
+  PrimaryVpcCidr:
     Type: String
     Default: 10.123.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+    Description: Define primary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
 
   PublicSubnet01Block:
     Type: String
     Default: 10.123.61.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+    Description: Define the first CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
 
   PublicSubnet02Block:
     Type: String
     Default: 10.123.62.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+    Description: Define the second CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
 
   PublicSubnet03Block:
     Type: String
     Default: 10.123.63.0/24
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for public subnet where external load balancer or bastion host will reside
+    Description: Define the third CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
 
   PrivateSubnet01Block:
     Type: String
     Default: 10.123.64.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for subnet 01 within the VPC
+    Description: Define the first CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
 
   PrivateSubnet02Block:
     Type: String
     Default: 10.123.128.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for subnet 02 within the VPC
+    Description: Define the second CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
 
   PrivateSubnet03Block:
     Type: String
     Default: 10.123.192.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for subnet 03 within the VPC
+    Description: Define the third CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
   
-  AdditionalCIDRBlock:
+  SecondaryVpcCidr:
     Type: String
     Default: 100.64.0.0/16
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: Additional VPC CidrBlock
+    Description: Define secondary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
 
   AdditionalSubnet01Block:
     Type: String
     Default: 100.64.0.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for additional subnet 01 within the VPC
+    Description: Define the first CIDR block on secondary VPC CIDR for private subnet for additional pod networking
 
   AdditionalSubnet02Block:
     Type: String
     Default: 100.64.64.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for additional subnet 02 within the VPC
+    Description: Define the second CIDR block on secondary VPC CIDR for private subnet for additional pod networking
 
   AdditionalSubnet03Block:
     Type: String
     Default: 100.64.128.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
-    Description: CidrBlock for additional subnet 03 within the VPC
+    Description: Define the third CIDR block on secondary VPC CIDR for private subnet for additional pod networking
+
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: "Worker Network Configuration"
+        default: "EKS Cluster Configurations"
       Parameters:
-      - VpcBlock
+      - ClusterName
+
+    - Label:
+        default: "VPC Configurations"
+      Parameters:
+      - PrimaryVpcCidr
       - PublicSubnet01Block
       - PublicSubnet02Block
       - PublicSubnet03Block
       - PrivateSubnet01Block
       - PrivateSubnet02Block
       - PrivateSubnet03Block
-      - AdditionalCIDRBlock
+      - SecondaryVpcCidr
       - AdditionalSubnet01Block
       - AdditionalSubnet02Block
       - AdditionalSubnet03Block
@@ -93,12 +103,12 @@ Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock:  !Ref VpcBlock
+      CidrBlock:  !Ref PrimaryVpcCidr
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-on-${AWS::Region}'
+        Value: !Sub '${ClusterName}-on-${AWS::Region}'
       - Key: auto-delete
         Value: "no"
   
@@ -106,7 +116,7 @@ Resources:
     Type: AWS::EC2::VPCCidrBlock
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !Ref AdditionalCIDRBlock
+      CidrBlock: !Ref SecondaryVpcCidr
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -134,7 +144,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-nat-on-'
+          - - !Sub '${ClusterName}-nat-on-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -153,7 +163,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-public-route-table-on-${AWS::Region}'
+        Value: !Sub '${ClusterName}-public-route-table-on-${AWS::Region}'
       - Key: Network
         Value: public
       - Key: auto-delete
@@ -168,7 +178,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-private-route-table-on-'
+          - - !Sub '${ClusterName}-private-route-table-on-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -213,7 +223,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-public-subnet-on-'
+          - - !Sub '${ClusterName}-public-subnet-on-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -240,7 +250,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-public-subnet-on-'
+          - - !Sub '${ClusterName}-public-subnet-on-'
             - Fn::Select:
               - 1
               - Fn::GetAZs: !Ref AWS::Region
@@ -267,7 +277,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-public-subnet-on-'
+          - - !Sub '${ClusterName}-public-subnet-on-'
             - Fn::Select:
               - 2
               - Fn::GetAZs: !Ref AWS::Region
@@ -295,7 +305,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-private-subnet-on-'
+          - - !Sub '${ClusterName}-private-subnet-on-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -323,7 +333,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-private-subnet-on-'
+          - - !Sub '${ClusterName}-private-subnet-on-'
             - Fn::Select:
               - 1
               - Fn::GetAZs: !Ref AWS::Region
@@ -351,7 +361,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-private-subnet-on-'
+          - - !Sub '${ClusterName}-private-subnet-on-'
             - Fn::Select:
               - 2
               - Fn::GetAZs: !Ref AWS::Region
@@ -379,7 +389,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-additional-subnet-on-'
+          - - !Sub '${ClusterName}-additional-subnet-on-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -407,7 +417,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-additional-subnet-on-'
+          - - !Sub '${ClusterName}-additional-subnet-on-'
             - Fn::Select:
               - 1
               - Fn::GetAZs: !Ref AWS::Region
@@ -435,7 +445,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${AWS::StackName}-additional-subnet-on-'
+          - - !Sub '${ClusterName}-additional-subnet-on-'
             - Fn::Select:
               - 2
               - Fn::GetAZs: !Ref AWS::Region
@@ -503,9 +513,103 @@ Resources:
       VpcId: !Ref VPC
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-control-plane-sg'
+        Value: !Sub '${ClusterName}-control-plane-sg'
       - Key: auto-delete
         Value: "no"
+  
+  NodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for all nodes in the cluster
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ClusterName}-worker-sg"
+      - Key: !Sub "kubernetes.io/cluster/${ClusterName}"
+        Value: 'owned'
+      - Key: auto-delete
+        Value: "no"
+  
+  BastionSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group that allow bastion to ssh to worker node
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub "${ClusterName}-bastion-sg"
+      - Key: auto-delete
+        Value: "no"
+        
+  NodeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow node to communicate with each other
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      IpProtocol: '-1'
+      FromPort: 0
+      ToPort: 65535
+  
+  NodeSecurityGroupFromBastionIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow Bastion to SSH to worker node
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref BastionSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+
+  NodeSecurityGroupFromControlPlaneIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow worker Kubelets and pods to receive communication from the cluster control plane
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref ControlPlaneSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1025
+      ToPort: 65535
+
+  ControlPlaneEgressToNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allow the cluster control plane to communicate with worker Kubelet and pods
+      GroupId: !Ref ControlPlaneSecurityGroup
+      DestinationSecurityGroupId: !Ref NodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 1025
+      ToPort: 65535
+
+  NodeSecurityGroupFromControlPlaneOn443Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow pods running extension API servers on port 443 to receive communication from cluster control plane
+      GroupId: !Ref NodeSecurityGroup
+      SourceSecurityGroupId: !Ref ControlPlaneSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ControlPlaneEgressToNodeSecurityGroupOn443:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      Description: Allow the cluster control plane to communicate with pods running extension API servers on port 443
+      GroupId: !Ref ControlPlaneSecurityGroup
+      DestinationSecurityGroupId: !Ref NodeSecurityGroup
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  ClusterControlPlaneSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow pods to communicate with the cluster API Server
+      GroupId: !Ref ControlPlaneSecurityGroup
+      SourceSecurityGroupId: !Ref NodeSecurityGroup
+      IpProtocol: tcp
+      ToPort: 443
+      FromPort: 443
 
 Outputs:
 
@@ -522,7 +626,7 @@ Outputs:
         - !Ref PublicSubnet02
         - !Ref PublicSubnet03
   
-  WorkerNodesSubnetIds:
+  PrivateSubnetIds:
     Description: >-
       Collection of private subnet id where worker node will be placed
     Value:
@@ -531,26 +635,33 @@ Outputs:
       - - !Ref PrivateSubnet01
         - !Ref PrivateSubnet02
         - !Ref PrivateSubnet03
-    Export:
-      Name: !Sub '${AWS::StackName}-private-subnet-ids'
 
-  BastionSubnetId:
+  PublicSubnetIds:
     Description: >-
-      Default subnet id where bastion host will be placed
-    Value: !Ref PublicSubnet01
-    Export:
-      Name: !Sub '${AWS::StackName}-bastion-subnet-id'
+      Collection of public subnet id where proxy should be depoyed
+    Value:
+      Fn::Join:
+      - ','
+      - - !Ref PublicSubnet01
+        - !Ref PublicSubnet02
+        - !Ref PublicSubnet03
 
-  ContorlPlaneSecurityGroups:
+  ClusterControlPlaneSecurityGroups:
     Description: >-
       Security group for the cluster control plane communication with worker nodes
     Value: !Ref ControlPlaneSecurityGroup
-    Export:
-      Name: !Sub '${AWS::StackName}-control-plane-sg'
+  
+  WorkerNodeSecurityGroup:
+    Description: >-
+      Security group for worker nodes
+    Value: !Ref NodeSecurityGroup
+  
+  BastionHostSecurityGroup:
+    Description: >-
+      Security group allowing bastion to SSH to worker node
+    Value: !Ref BastionSecurityGroup
 
-  VpcId:
+  Id:
     Description: >-
       Exported VPC id for EKS Cluster
     Value: !Ref VPC
-    Export:
-      Name: !Sub '${AWS::StackName}-vpc-id'

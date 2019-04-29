@@ -1,0 +1,15 @@
+
+master:
+  image: redis
+  version: '2.8.23'
+  replicaCount: 1
+
+slave:
+  image: kubernetes/redis-slave
+  version: 'v2'
+  replicaCount: 2
+
+frontend:
+  image: k8s.gcr.io/guestbook
+  version: 'v3'
+  replicaCount: 3

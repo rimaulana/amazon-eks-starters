@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  mapRoles: |
+    - rolearn: arn:aws:iam::460449571267:role/k8s-dev-WorkerNodes-7DP559D1EWXQ-NodeInstanceRole-1AOZ4SNJ2U0Q
+      username: system:node:{{EC2PrivateDNSName}}
+      groups:
+        - system:bootstrappers
+        - system:nodes
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace: kube-system

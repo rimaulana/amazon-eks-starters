@@ -3,6 +3,23 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Amazon EKS - Node Group definition with support for Cluster Autoscaler'
 
 Parameters:
+  K8sVersion:
+    Type: String
+    Default: '11'
+    Description: Choose Kubernetes version 1.X
+    AllowedValues:
+    - '10'
+    - '11'
+    - '12'
+  
+  NodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Choose security group for worker node
+
+  PrivateSubnets:
+    Type: String
+    Description: Define private subnets on VPC for proxy server, multiple Subnet Ids separated by comma subnet-123,subnet-456
+
   KeyName:
     Description: The EC2 Key Pair to allow SSH access to the instances
     Type: AWS::EC2::KeyPair::KeyName
@@ -101,80 +118,38 @@ Parameters:
     Default: ""
     Type: String
 
-  NodeGroupName:
-    Description: Unique identifier for the Node Group.
-    Type: String
-
-  VPCStackName:
-    Description: >-
-      The name of CloudFormation stack creating the VPC
-    Type: String
-
 Mappings:
-  RegionMap:
-    us-west-2:
-      nogpu: ami-0e7ee8863c8536cce
-      gpu: ami-02e0b615d7749e016
-    us-east-1:
-      nogpu: ami-09a7630ca9ee4ee22
-      gpu: ami-00cce60e4c241de4c
-    us-east-2:
-      nogpu: ami-02a8a05e480e902e2
-      gpu: ami-0a6f0cc2cbef07ba9
-    eu-central-1:
-      nogpu: ami-074583f8d5a05e27b
-      gpu: ami-0e24c510ebe972f26
-    eu-north-1:
-      nogpu: ami-0e1d5399bfbe402e0
-      gpu: ami-f9810887
-    eu-west-1:
-      nogpu: ami-076c1952dd7a28909
-      gpu: ami-098171628d39d4d6c
-    eu-west-2:
-      nogpu: ami-0bfa0f971add9fb2f
-      gpu: ami-0286d34d9642b1717
-    eu-west-3:
-      nogpu: ami-0f0e4bda9786ec624
-      gpu: ami-05c4fa636d6b561e3
-    ap-northeast-1:
-      nogpu: ami-049090cdbc5e3c080
-      gpu: ami-03c93f6816f8652c7
-    ap-northeast-2:
-      nogpu: ami-0b39dee42365df927
-      gpu: ami-0089fa930c7f3e830
-    ap-south-1:
-      nogpu: ami-0c2a98be00f0b5bb4
-      gpu: ami-0bed4d4741161bae1
-    ap-southeast-1:
-      nogpu: ami-0a3df91af7c8225db
-      gpu: ami-014ed22ec2f34c4bf
-    ap-southeast-2:
-      nogpu: ami-0f4d387d27ad36792
-      gpu: ami-096064ec61eaa29df
-    
+{{ .AmiList }}
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: 'VPC Stack Name'
+          default: 'EKS Cluster Configurations'
         Parameters:
-          - VPCStackName
+        - ClusterName
+        - K8sVersion
+
       - Label:
-          default: 'EKS Cluster'
+          default: 'VPC Configurations'
         Parameters:
-          - ClusterName
+        - PrivateSubnets
+
       - Label:
           default: 'Worker Node Configuration'
         Parameters:
-          - NodeGroupName
-          - NodeAutoScalingGroupMinSize
-          - NodeAutoScalingGroupMaxSize
-          - NodeInstanceType
-          - NodeGPUSupport
-          - NodeVolumeSize
-          - KeyName
-          - BootstrapArguments
+        - NodeAutoScalingGroupMinSize
+        - NodeAutoScalingGroupMaxSize
+        - NodeInstanceType
+        - NodeGPUSupport
+        - NodeVolumeSize
+        - BootstrapArguments
+      
+      - Label:
+          default: "Worker Node Accessibility"
+        Parameters:
+        - KeyName
+        - NodeSecurityGroup
 
 Resources:
   NodeInstanceProfile:
@@ -216,107 +191,6 @@ Resources:
             - 'autoscaling:TerminateInstanceInAutoScalingGroup'
             Resource: '*'
 
-  NodeSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for all nodes in the cluster
-      VpcId:
-        Fn::ImportValue: !Sub '${VPCStackName}-vpc-id'
-      Tags:
-      - Key: Name
-        Value: !Sub "${ClusterName}-worker-sg"
-      - Key: !Sub "kubernetes.io/cluster/${ClusterName}"
-        Value: 'owned'
-      - Key: auto-delete
-        Value: "no"
-  
-  BastionSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group that allow bastion to ssh to worker node
-      VpcId:
-        Fn::ImportValue: !Sub '${VPCStackName}-vpc-id'
-      Tags:
-      - Key: Name
-        Value: !Sub "${ClusterName}-bastion-sg"
-      - Key: auto-delete
-        Value: "no"
-        
-  NodeSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow node to communicate with each other
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: '-1'
-      FromPort: 0
-      ToPort: 65535
-  
-  NodeSecurityGroupFromBastionIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow Bastion to SSH to worker node
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: !Ref BastionSecurityGroup
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
-
-  NodeSecurityGroupFromControlPlaneIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow worker Kubelets and pods to receive communication from the cluster control plane
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId:
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      IpProtocol: tcp
-      FromPort: 1025
-      ToPort: 65535
-
-  ControlPlaneEgressToNodeSecurityGroup:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      Description: Allow the cluster control plane to communicate with worker Kubelet and pods
-      GroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      DestinationSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: tcp
-      FromPort: 1025
-      ToPort: 65535
-
-  NodeSecurityGroupFromControlPlaneOn443Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow pods running extension API servers on port 443 to receive communication from cluster control plane
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      IpProtocol: tcp
-      FromPort: 443
-      ToPort: 443
-
-  ControlPlaneEgressToNodeSecurityGroupOn443:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      Description: Allow the cluster control plane to communicate with pods running extension API servers on port 443
-      GroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      DestinationSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: tcp
-      FromPort: 443
-      ToPort: 443
-
-  ClusterControlPlaneSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow pods to communicate with the cluster API Server
-      GroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: tcp
-      ToPort: 443
-      FromPort: 443
-
   NodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -327,10 +201,10 @@ Resources:
       VPCZoneIdentifier:
         Fn::Split:
         - ','
-        - Fn::ImportValue: !Sub '${VPCStackName}-private-subnet-ids'
+        - !Ref PrivateSubnets
       Tags:
       - Key: Name
-        Value: !Sub "${ClusterName}-${NodeGroupName}-node"
+        Value: !Sub "${ClusterName}-node"
         PropagateAtLaunch: true
       - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
         Value: 'true'
@@ -353,7 +227,7 @@ Resources:
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: 
         Fn::FindInMap:
-        - RegionMap
+        - !Ref K8sVersion
         - !Ref AWS::Region
         - !Ref NodeGPUSupport
       InstanceType: !Ref NodeInstanceType
@@ -381,9 +255,3 @@ Outputs:
   NodeInstanceRole:
     Description: The node instance role
     Value: !GetAtt NodeInstanceRole.Arn
-
-  BastionSecurityGroup:
-    Description: Security group used by bastion to SSH to worker node
-    Value: !Ref BastionSecurityGroup
-    Export:
-      Name: !Sub '${VPCStackName}-bastion-sg'

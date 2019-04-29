@@ -3,6 +3,23 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Amazon EKS - Node Group definition with support for Cluster Autoscaler'
 
 Parameters:
+  K8sVersion:
+    Type: String
+    Default: '11'
+    Description: Choose Kubernetes version 1.X
+    AllowedValues:
+    - '10'
+    - '11'
+    - '12'
+  
+  NodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Choose security group for worker node
+
+  PrivateSubnets:
+    Type: String
+    Description: Define private subnets on VPC for proxy server, multiple Subnet Ids separated by comma subnet-123,subnet-456
+
   KeyName:
     Description: The EC2 Key Pair to allow SSH access to the instances
     Type: AWS::EC2::KeyPair::KeyName
@@ -101,80 +118,158 @@ Parameters:
     Default: ""
     Type: String
 
-  NodeGroupName:
-    Description: Unique identifier for the Node Group.
-    Type: String
-
-  VPCStackName:
-    Description: >-
-      The name of CloudFormation stack creating the VPC
-    Type: String
-
 Mappings:
-    v1.11:
+  '12':
     us-west-2:
-      nogpu: ami-0c28139856aaf9c3b
-      gpu: ami-06045aa686f46dd58
+      nogpu: ami-0923e4b35a30a5f53
+      gpu: ami-0bebf2322fd52a42e
     us-east-1:
-      nogpu: ami-0eeeef929db40543c
-      gpu: ami-0558da965e2fc68b0
+      nogpu: ami-0abcb9f9190e867ab
+      gpu: ami-0cb7959f92429410a
     us-east-2:
-      nogpu: ami-0484545fe7d3da96f
-      gpu: ami-0c3afad2ea917168e
+      nogpu: ami-04ea7cb66af82ae4a
+      gpu: ami-0118b61dc2312dee2
     eu-central-1:
-      nogpu: ami-032ed5525d4df2de3
-      gpu: ami-0939712219b80b525
+      nogpu: ami-0d741ed58ca5b342e
+      gpu: ami-0c57db5b204001099
     eu-north-1:
-      nogpu: ami-0154b2479ba20f8bb
-      gpu: ami-18bf3666
+      nogpu: ami-0c65a309fc58f6907
+      gpu: ami-09354b076296f5946
     eu-west-1:
-      nogpu: ami-098fb7e9b507904e7
-      gpu: ami-014969e8d07b2fc9f
+      nogpu: ami-08716b70cac884aaa
+      gpu: ami-0fbc930681258db86
     eu-west-2:
-      nogpu: ami-0d69ab00cb41d6eda
-      gpu: ami-0bb14a7e038ad534c
+      nogpu: ami-0c7388116d474ee10
+      gpu: ami-0d832fced2cfe0f7b
     eu-west-3:
-      nogpu: ami-018ebb030cf6ae00b
-      gpu: ami-0a3db0dbd972b38f2
+      nogpu: ami-0560aea042fec8b12
+      gpu: ami-0f8fa088b406ebba2
     ap-northeast-1:
-      nogpu: ami-07fdc9272ce5b0ce5
-      gpu: ami-0880d3b662781d6d6
+      nogpu: ami-0bfedee6a7845c26d
+      gpu: ami-08e41cc84f4b3f27f
     ap-northeast-2:
-      nogpu: ami-091e0e1906e653417
-      gpu: ami-0c3db49d90afa0f1e
+      nogpu: ami-0a904348b703e620c
+      gpu: ami-0c43b885e33fdc29e
     ap-south-1:
-      nogpu: ami-0b6f791fc54125a8a
-      gpu: ami-00b37b9a91efc5fff
+      nogpu: ami-09c3eb35bb3be46a4
+      gpu: ami-0d3ecaf4f3318c714
     ap-southeast-1:
-      nogpu: ami-038d55c26bf01998f
-      gpu: ami-0c903ead334faa6a3
+      nogpu: ami-07b922b9b94d9a6d2
+      gpu: ami-0655b4dbbe2d46703
     ap-southeast-2:
-      nogpu: ami-0e07b5081bb77d540
-      gpu: ami-02d7e0f064bd7d8e0
-    
+      nogpu: ami-0f0121e9e64ebd3dc
+      gpu: ami-07079cd9ff1b312da
+  '11':
+    us-west-2:
+      nogpu: ami-05ecac759c81e0b0c
+      gpu: ami-08377056d89909b2a
+    us-east-1:
+      nogpu: ami-02c1de421df89c58d
+      gpu: ami-06ec2ea207616c078
+    us-east-2:
+      nogpu: ami-03b1b6cc34c010f9c
+      gpu: ami-0e6993a35aae3407b
+    eu-central-1:
+      nogpu: ami-0c2709025eb548246
+      gpu: ami-0bf09c13f4204ce9d
+    eu-north-1:
+      nogpu: ami-084bd3569d08c6e67
+      gpu: ami-0a1714bb5be631b59
+    eu-west-1:
+      nogpu: ami-0e82e73403dd69fa3
+      gpu: ami-0b4d0f56587640d5a
+    eu-west-2:
+      nogpu: ami-0da9aa88dd2ec8297
+      gpu: ami-00e98f9e6fd2319e5
+    eu-west-3:
+      nogpu: ami-099369bc73d1cc66f
+      gpu: ami-0039e2556e6290828
+    ap-northeast-1:
+      nogpu: ami-0d555d5f56c843803
+      gpu: ami-07fc636e8f6d3e18b
+    ap-northeast-2:
+      nogpu: ami-0144ae839b1111571
+      gpu: ami-002057772097fcef9
+    ap-south-1:
+      nogpu: ami-02071c0110dc365ba
+      gpu: ami-04fe7f4c75aac7196
+    ap-southeast-1:
+      nogpu: ami-00c91afdb73cf7f93
+      gpu: ami-08d5da0b12751a31f
+    ap-southeast-2:
+      nogpu: ami-05f4510fcfe56961c
+      gpu: ami-04024dd8e0b9e36ff
+  '10':
+    us-west-2:
+      nogpu: ami-05a71d034119ffc12
+      gpu: ami-0901518d7557125c8
+    us-east-1:
+      nogpu: ami-03a1e71fb42fc37dd
+      gpu: ami-00f74c3728d4ca27d
+    us-east-2:
+      nogpu: ami-093d55c2ba99ab2c8
+      gpu: ami-0a788defb66cdfffb
+    eu-central-1:
+      nogpu: ami-03bdf8079f6c013c5
+      gpu: ami-0a8536a894bd4ea06
+    eu-north-1:
+      nogpu: ami-0be77fe86d741fc81
+      gpu: ami-05baf7a6c293fe2ed
+    eu-west-1:
+      nogpu: ami-06368da7f495b68e9
+      gpu: ami-0f6f3929a9d7a418e
+    eu-west-2:
+      nogpu: ami-0f1f2189b4741bc60
+      gpu: ami-0a12396b818bc2383
+    eu-west-3:
+      nogpu: ami-03a9acb0f6e0d424d
+      gpu: ami-086d5edcaacd0ccfd
+    ap-northeast-1:
+      nogpu: ami-0c9fb6a3fda95d373
+      gpu: ami-073f06a1edd22ae2e
+    ap-northeast-2:
+      nogpu: ami-00ea4ea959f28b4cf
+      gpu: ami-0baff950f5217e54e
+    ap-south-1:
+      nogpu: ami-0f07478f5c5eb9e20
+      gpu: ami-033bd2c2a3431923e
+    ap-southeast-1:
+      nogpu: ami-05dac5d0ada75e22f
+      gpu: ami-09defa93988984fa1
+    ap-southeast-2:
+      nogpu: ami-00513f18e1900ce1e
+      gpu: ami-00d9364d705e902c9
+
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: 'VPC Stack Name'
+          default: 'EKS Cluster Configurations'
         Parameters:
-          - VPCStackName
+        - ClusterName
+        - K8sVersion
+
       - Label:
-          default: 'EKS Cluster'
+          default: 'VPC Configurations'
         Parameters:
-          - ClusterName
+        - PrivateSubnets
+
       - Label:
           default: 'Worker Node Configuration'
         Parameters:
-          - NodeGroupName
-          - NodeAutoScalingGroupMinSize
-          - NodeAutoScalingGroupMaxSize
-          - NodeInstanceType
-          - NodeGPUSupport
-          - NodeVolumeSize
-          - KeyName
-          - BootstrapArguments
+        - NodeAutoScalingGroupMinSize
+        - NodeAutoScalingGroupMaxSize
+        - NodeInstanceType
+        - NodeGPUSupport
+        - NodeVolumeSize
+        - BootstrapArguments
+      
+      - Label:
+          default: "Worker Node Accessibility"
+        Parameters:
+        - KeyName
+        - NodeSecurityGroup
 
 Resources:
   NodeInstanceProfile:
@@ -216,107 +311,6 @@ Resources:
             - 'autoscaling:TerminateInstanceInAutoScalingGroup'
             Resource: '*'
 
-  NodeSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for all nodes in the cluster
-      VpcId:
-        Fn::ImportValue: !Sub '${VPCStackName}-vpc-id'
-      Tags:
-      - Key: Name
-        Value: !Sub "${ClusterName}-worker-sg"
-      - Key: !Sub "kubernetes.io/cluster/${ClusterName}"
-        Value: 'owned'
-      - Key: auto-delete
-        Value: "no"
-  
-  BastionSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group that allow bastion to ssh to worker node
-      VpcId:
-        Fn::ImportValue: !Sub '${VPCStackName}-vpc-id'
-      Tags:
-      - Key: Name
-        Value: !Sub "${ClusterName}-bastion-sg"
-      - Key: auto-delete
-        Value: "no"
-        
-  NodeSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow node to communicate with each other
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: '-1'
-      FromPort: 0
-      ToPort: 65535
-  
-  NodeSecurityGroupFromBastionIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow Bastion to SSH to worker node
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: !Ref BastionSecurityGroup
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
-
-  NodeSecurityGroupFromControlPlaneIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow worker Kubelets and pods to receive communication from the cluster control plane
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId:
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      IpProtocol: tcp
-      FromPort: 1025
-      ToPort: 65535
-
-  ControlPlaneEgressToNodeSecurityGroup:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      Description: Allow the cluster control plane to communicate with worker Kubelet and pods
-      GroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      DestinationSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: tcp
-      FromPort: 1025
-      ToPort: 65535
-
-  NodeSecurityGroupFromControlPlaneOn443Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow pods running extension API servers on port 443 to receive communication from cluster control plane
-      GroupId: !Ref NodeSecurityGroup
-      SourceSecurityGroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      IpProtocol: tcp
-      FromPort: 443
-      ToPort: 443
-
-  ControlPlaneEgressToNodeSecurityGroupOn443:
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      Description: Allow the cluster control plane to communicate with pods running extension API servers on port 443
-      GroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      DestinationSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: tcp
-      FromPort: 443
-      ToPort: 443
-
-  ClusterControlPlaneSecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Allow pods to communicate with the cluster API Server
-      GroupId: 
-        Fn::ImportValue: !Sub '${VPCStackName}-control-plane-sg'
-      SourceSecurityGroupId: !Ref NodeSecurityGroup
-      IpProtocol: tcp
-      ToPort: 443
-      FromPort: 443
-
   NodeGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
@@ -327,10 +321,10 @@ Resources:
       VPCZoneIdentifier:
         Fn::Split:
         - ','
-        - Fn::ImportValue: !Sub '${VPCStackName}-private-subnet-ids'
+        - !Ref PrivateSubnets
       Tags:
       - Key: Name
-        Value: !Sub "${ClusterName}-${NodeGroupName}-node"
+        Value: !Sub "${ClusterName}-node"
         PropagateAtLaunch: true
       - Key: !Sub 'kubernetes.io/cluster/${ClusterName}'
         Value: 'true'
@@ -353,7 +347,7 @@ Resources:
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: 
         Fn::FindInMap:
-        - RegionMap
+        - !Ref K8sVersion
         - !Ref AWS::Region
         - !Ref NodeGPUSupport
       InstanceType: !Ref NodeInstanceType
@@ -381,9 +375,3 @@ Outputs:
   NodeInstanceRole:
     Description: The node instance role
     Value: !GetAtt NodeInstanceRole.Arn
-
-  BastionSecurityGroup:
-    Description: Security group used by bastion to SSH to worker node
-    Value: !Ref BastionSecurityGroup
-    Export:
-      Name: !Sub '${VPCStackName}-bastion-sg'

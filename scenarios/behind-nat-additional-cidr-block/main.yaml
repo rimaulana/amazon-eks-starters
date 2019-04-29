@@ -1,0 +1,384 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Main Stack for EKS with proxy'
+
+Parameters:
+
+  ClusterName:
+    Type: String
+    Description: Give the name of EKS cluster
+  
+  K8sVersion:
+    Type: String
+    Default: '11'
+    Description: Choose Kubernetes version 1.X
+    AllowedValues:
+    - '10'
+    - '11'
+    - '12'
+
+  PrimaryVpcCidr:
+    Type: String
+    Default: 10.123.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define primary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  PublicSubnet01Block:
+    Type: String
+    Default: 10.123.61.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the first CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
+
+  PublicSubnet02Block:
+    Type: String
+    Default: 10.123.62.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the second CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
+
+  PublicSubnet03Block:
+    Type: String
+    Default: 10.123.63.0/24
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the third CIDR block on primary VPC CIDR for public subnet where external load balancer and proxy server will reside
+
+  PrivateSubnet01Block:
+    Type: String
+    Default: 10.123.64.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the first CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
+
+  PrivateSubnet02Block:
+    Type: String
+    Default: 10.123.128.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the second CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
+
+  PrivateSubnet03Block:
+    Type: String
+    Default: 10.123.192.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the third CIDR block on primary VPC CIDR for private subnet where internal load balancer, worker node, pod networking and proxy NLB will reside
+  
+  SecondaryVpcCidr:
+    Type: String
+    Default: 100.64.0.0/16
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define secondary CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  AdditionalSubnet01Block:
+    Type: String
+    Default: 100.64.0.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the first CIDR block on secondary VPC CIDR for private subnet for additional pod networking
+
+  AdditionalSubnet02Block:
+    Type: String
+    Default: 100.64.64.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the second CIDR block on secondary VPC CIDR for private subnet for additional pod networking
+
+  AdditionalSubnet03Block:
+    Type: String
+    Default: 100.64.128.0/18
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the third CIDR block on secondary VPC CIDR for private subnet for additional pod networking
+  
+  AllowedSshCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    Description: Define the CIDR block where proxy server will open its SSH port for.
+
+  BastionInstanceType:
+    Type: String
+    Default: t2.nano
+    Description: Choose proxy server instance type.
+    AllowedValues: 
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+  
+  BastionAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: DO NOT CHANGE - this variable will configure proxy server AMI to the latest Amazon Linux 2 AMI ID
+  
+  KeyName:
+    Type: String
+    Default: rmaulan-testbed
+    Description: SSH key name to enable SSH access to proxy server and worker nodes
+  
+  NodeGPUSupport:
+    Type: String
+    Description: Choose whether to enable GPU support on worker nodes or not
+    Default: nogpu
+    AllowedValues:
+    - nogpu
+    - gpu
+
+  NodeInstanceType:
+    Description: Define EC2 instance type for EKS worker node
+    Type: String
+    Default: t2.medium
+    AllowedValues:
+    - t2.small
+    - t2.medium
+    - t2.large
+    - t2.xlarge
+    - t2.2xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - m5.large
+    - m5.xlarge
+    - m5.2xlarge
+    - m5.4xlarge
+    - m5.12xlarge
+    - m5.24xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - c5.large
+    - c5.xlarge
+    - c5.2xlarge
+    - c5.4xlarge
+    - c5.9xlarge
+    - c5.18xlarge
+    - i3.large
+    - i3.xlarge
+    - i3.2xlarge
+    - i3.4xlarge
+    - i3.8xlarge
+    - i3.16xlarge
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - r4.large
+    - r4.xlarge
+    - r4.2xlarge
+    - r4.4xlarge
+    - r4.8xlarge
+    - r4.16xlarge
+    - x1.16xlarge
+    - x1.32xlarge
+    - p2.xlarge
+    - p2.8xlarge
+    - p2.16xlarge
+    - p3.2xlarge
+    - p3.8xlarge
+    - p3.16xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  NodeAutoScalingGroupMinSize:
+    Type: Number
+    Description: Minimum number of worker node in the cluster.
+    Default: 1
+
+  NodeAutoScalingGroupMaxSize:
+    Type: Number
+    Description: Maximum number of worker node in the cluster.
+    Default: 100 
+
+  NodeVolumeSize:
+    Type: Number
+    Description: Define the size of worker node storage
+    Default: 20
+  
+  BootstrapArguments:
+    Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
+    Default: ""
+    Type: String
+
+  EnableBastion:
+    Description: Set true to create a bastion host
+    Default: "false"
+    Type: String
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: "EKS Cluster Configurations"
+      Parameters:
+      - ClusterName
+      - K8sVersion
+
+    - Label:
+        default: "Bastion Configurations"
+      Parameters:
+      - EnableBastion
+      - BastionAmiId
+      - BastionInstanceType
+
+    - Label:
+        default: "VPC Configurations"
+      Parameters:
+      - PrimaryVpcCidr
+      - PublicSubnet01Block
+      - PublicSubnet02Block
+      - PublicSubnet03Block
+      - PrivateSubnet01Block
+      - PrivateSubnet02Block
+      - PrivateSubnet03Block
+      - SecondaryVpcCidr
+      - AdditionalSubnet01Block
+      - AdditionalSubnet02Block
+      - AdditionalSubnet03Block
+
+    - Label:
+        default: 'Worker Node Configurations'
+      Parameters:
+      - NodeAutoScalingGroupMinSize
+      - NodeAutoScalingGroupMaxSize
+      - NodeInstanceType
+      - NodeGPUSupport
+      - NodeVolumeSize
+      - BootstrapArguments
+
+    - Label:
+        default: "Bastion Accessibility"
+      Parameters:
+      - AllowedSshCidr
+      - KeyName
+
+Conditions:
+  CreateBastion:
+    Fn::Equals:
+    - !Ref EnableBastion
+    - 'true'
+
+Resources:
+  Vpc:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./vpc.yaml
+      Parameters:
+        ClusterName: !Ref ClusterName
+        PrimaryVpcCidr: !Ref PrimaryVpcCidr
+        SecondaryVpcCidr: !Ref SecondaryVpcCidr
+        PublicSubnet01Block: !Ref PublicSubnet01Block
+        PublicSubnet02Block: !Ref PublicSubnet02Block
+        PublicSubnet03Block: !Ref PublicSubnet03Block
+        PrivateSubnet01Block: !Ref PrivateSubnet01Block
+        PrivateSubnet02Block: !Ref PrivateSubnet02Block
+        PrivateSubnet03Block: !Ref PrivateSubnet03Block
+        AdditionalSubnet01Block: !Ref AdditionalSubnet01Block
+        AdditionalSubnet02Block: !Ref AdditionalSubnet02Block
+        AdditionalSubnet03Block: !Ref AdditionalSubnet03Block
+      Tags:
+      - Key: auto-delete
+        Value: "no"
+  
+  Bastion:
+    Type: AWS::CloudFormation::Stack
+    Condition: CreateBastion
+    Properties:
+      TemplateURL: ./bastion.yaml
+      Parameters:
+        ClusterName: !Ref ClusterName
+        VpcId: 
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.Id
+        PublicSubnets: 
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.PublicSubnetIds
+        BastionSecurityGroup:
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.BastionHostSecurityGroup
+        KeyName: !Ref KeyName
+        BastionInstanceType: !Ref BastionInstanceType
+        BastionAmiId: !Ref BastionAmiId
+        AllowSSHFrom: !Ref AllowedSshCidr
+      Tags:
+      - Key: auto-delete
+        Value: "no"
+  
+  WorkerNodes:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+    - EKSCluster
+    Properties:
+      TemplateURL: ./worker.yaml
+      Parameters:
+        ClusterName: !Ref ClusterName
+        K8sVersion: !Ref K8sVersion
+        PrivateSubnets:
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.PrivateSubnetIds
+        NodeAutoScalingGroupMinSize: !Ref NodeAutoScalingGroupMinSize
+        NodeAutoScalingGroupMaxSize: !Ref NodeAutoScalingGroupMaxSize
+        NodeInstanceType: !Ref NodeInstanceType
+        NodeGPUSupport: !Ref NodeGPUSupport
+        NodeVolumeSize: !Ref NodeVolumeSize
+        BootstrapArguments: !Ref BootstrapArguments
+        KeyName: !Ref KeyName
+        NodeSecurityGroup:
+          Fn::GetAtt:
+          - Vpc
+          - Outputs.WorkerNodeSecurityGroup
+      Tags:
+      - Key: auto-delete
+        Value: "no"
+
+  EKSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - eks.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+      - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+
+  EKSCluster:
+    Type: AWS::EKS::Cluster
+    Properties:
+      Name: !Ref ClusterName
+      RoleArn: !GetAtt EKSServiceRole.Arn
+      Version:
+        Fn::Join:
+        - '.'
+        - - '1'
+          - !Ref K8sVersion
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+        - Fn::GetAtt:
+          - Vpc
+          - Outputs.ClusterControlPlaneSecurityGroups
+        SubnetIds: 
+          Fn::Split:
+          - ','
+          - Fn::GetAtt:
+            - Vpc
+            - Outputs.EKSSubnetIds
+
+Outputs:
+  WorkerNodeInstanceRole:
+    Description: Node instance role to be added to aws-auth configMap
+    Value: !Sub '${WorkerNodes.Outputs.NodeInstanceRole}'
+      
