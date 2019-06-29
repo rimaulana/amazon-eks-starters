@@ -5,7 +5,7 @@ master:
   replicaCount: 1
 
 slave:
-  image: kubernetes/redis-slave
+  image: k8s.gcr.io/redis-slave
   version: 'v2'
   replicaCount: 2
 
