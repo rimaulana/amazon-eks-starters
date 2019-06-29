@@ -108,7 +108,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
       - Key: Name
-        Value: !Sub '${ClusterName}-on-${AWS::Region}'
+        Value: !Sub '${ClusterName}-in-${AWS::Region}'
       - Key: auto-delete
         Value: "no"
   
@@ -144,7 +144,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-nat-on-'
+          - - !Sub '${ClusterName}-in-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -163,7 +163,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
       - Key: Name
-        Value: !Sub '${ClusterName}-public-route-table-on-${AWS::Region}'
+        Value: !Sub '${ClusterName}-public-in-${AWS::Region}'
       - Key: Network
         Value: public
       - Key: auto-delete
@@ -178,7 +178,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-private-route-table-on-'
+          - - !Sub '${ClusterName}-private-in-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -219,11 +219,13 @@ Resources:
       VpcId:
         Ref: VPC
       Tags:
+      - Key: kubernetes.io/role/elb
+        Value: "1"
       - Key: Name
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-public-subnet-on-'
+          - - !Sub '${ClusterName}-public-in-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -246,11 +248,13 @@ Resources:
       VpcId:
         Ref: VPC
       Tags:
+      - Key: kubernetes.io/role/elb
+        Value: "1"
       - Key: Name
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-public-subnet-on-'
+          - - !Sub '${ClusterName}-public-in-'
             - Fn::Select:
               - 1
               - Fn::GetAZs: !Ref AWS::Region
@@ -273,11 +277,13 @@ Resources:
       VpcId:
         Ref: VPC
       Tags:
+      - Key: kubernetes.io/role/elb
+        Value: "1"
       - Key: Name
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-public-subnet-on-'
+          - - !Sub '${ClusterName}-public-in-'
             - Fn::Select:
               - 2
               - Fn::GetAZs: !Ref AWS::Region
@@ -305,7 +311,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-private-subnet-on-'
+          - - !Sub '${ClusterName}-private-in-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -333,7 +339,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-private-subnet-on-'
+          - - !Sub '${ClusterName}-private-in-'
             - Fn::Select:
               - 1
               - Fn::GetAZs: !Ref AWS::Region
@@ -361,7 +367,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-private-subnet-on-'
+          - - !Sub '${ClusterName}-private-in-'
             - Fn::Select:
               - 2
               - Fn::GetAZs: !Ref AWS::Region
@@ -389,7 +395,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-additional-subnet-on-'
+          - - !Sub '${ClusterName}-add-private-in-'
             - Fn::Select:
               - 0
               - Fn::GetAZs: !Ref AWS::Region
@@ -417,7 +423,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-additional-subnet-on-'
+          - - !Sub '${ClusterName}-add-private-in-'
             - Fn::Select:
               - 1
               - Fn::GetAZs: !Ref AWS::Region
@@ -445,7 +451,7 @@ Resources:
         Value: 
           Fn::Join:
           - ""
-          - - !Sub '${ClusterName}-additional-subnet-on-'
+          - - !Sub '${ClusterName}-add-private-in-'
             - Fn::Select:
               - 2
               - Fn::GetAZs: !Ref AWS::Region
