@@ -1,0 +1,4 @@
+scenarios/behind-nat-additional-cidr-block/eks-ami-updater.log
+scenarios/behind-nat-additional-cidr-block/worker.yaml
+scenarios/behind-nat-additional-cidr-block/cfn.yaml
+scenarios/behind-nat-additional-cidr-block/aws-auth.yaml
