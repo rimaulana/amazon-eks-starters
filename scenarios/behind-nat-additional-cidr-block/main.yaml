@@ -10,12 +10,13 @@ Parameters:
   
   K8sVersion:
     Type: String
-    Default: '11'
+    Default: '14'
     Description: Choose Kubernetes version 1.X
     AllowedValues:
     - '11'
     - '12'
     - '13'
+    - '14'
 
   PrimaryVpcCidr:
     Type: String
@@ -67,7 +68,7 @@ Parameters:
 
   AdditionalSubnet01Block:
     Type: String
-    Default: 100.64.0.0/16
+    Default: 100.64.0.0/18
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     Description: Define the first CIDR block on secondary VPC CIDR for private subnet for additional pod networking
 

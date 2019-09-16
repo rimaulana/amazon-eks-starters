@@ -11,6 +11,7 @@ Parameters:
     - '11'
     - '12'
     - '13'
+    - '14'
   
   NodeSecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
@@ -120,6 +121,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonElasticFileSystemReadOnlyAccess
       Policies:
       - PolicyName: cluster-autoscaler
         PolicyDocument:
@@ -143,6 +145,14 @@ Resources:
             - 'logs:CreateLogGroup'
             - 'logs:CreateLogStream'
             - 'logs:PutLogEvents'
+            Resource: '*'
+      - PolicyName: kube2iam-assume
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'sts:AssumeRole'
             Resource: '*'
 
   NodeGroup:
@@ -200,6 +210,22 @@ Resources:
             #!/bin/bash
             set -o xtrace
             /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArguments}
+
+            KUBELET_CONFIG=/etc/kubernetes/kubelet/kubelet-config.json
+            CURRENT_DNS_SERVERS=`jq ".clusterDNS[]" $KUBELET_CONFIG`
+            INTERNAL_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+            
+            ALL_DNS_IPS="\"$INTERNAL_IP\"";
+            
+            for host in $CURRENT_DNS_SERVERS; do
+              ALL_DNS_IPS="$ALL_DNS_IPS,$host";
+            done
+            
+            echo "$(jq ".clusterDNS=[$ALL_DNS_IPS]" $KUBELET_CONFIG)" > $KUBELET_CONFIG
+            
+            systemctl daemon-reload
+            systemctl restart kubelet
+
             /opt/aws/bin/cfn-signal --exit-code $? \
                      --stack  ${AWS::StackName} \
                      --resource NodeGroup  \
