@@ -1,7 +1,10 @@
 BUCKET ?= gresik
+SHELL = /bin/bash
 BUCKETREGION ?= us-east-1
 STACKREGION ?= us-east-1
 STACKNAME ?= k8s-dev
+K8S_VERSION = $(shell grep K8sVersion parameters.conf | cut -d"=" -f2)
+GPU_SUPPORT = $(shell grep -v '^\s*\(\#\|$$\)' parameters.conf | grep NodeGPUSupport | cut -d"=" -f2)
 
 .PHONY: package
 package: validate
@@ -12,8 +15,8 @@ package: validate
 		--region $(BUCKETREGION);
 
 .PHONY: validate
-validate: generate
-	ls | grep -v -e aws-auth | grep .yaml | xargs cfn-lint
+validate: generate 
+	ls | grep -v -e aws-auth | grep -v -e custom-networking | grep .yaml | xargs cfn-lint
 
 .PHONY: depcheck
 depcheck:
@@ -21,9 +24,13 @@ depcheck:
 
 .PHONY: generate
 generate: clean
-	eks-ami-updater \
-		--template worker.tmpl \
-		--output worker.yaml;
+	cp worker.tmpl worker.yaml;
+	sed -i s,K8S_VERSION,1.$(K8S_VERSION),g worker.yaml;
+	if [[ "$(GPU_SUPPORT)" == "false" || -z "$(GPU_SUPPORT)" ]]; then \
+    	sed -i s,IMAGE_TYPE,amazon-linux-2,g worker.yaml; \
+    else \
+		sed -i s,IMAGE_TYPE,amazon-linux-2-gpu,g worker.yaml; \
+	fi
 
 .PHONY: deploy
 deploy: package

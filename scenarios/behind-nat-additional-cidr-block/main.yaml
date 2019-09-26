@@ -114,10 +114,10 @@ Parameters:
   NodeGPUSupport:
     Type: String
     Description: Choose whether to enable GPU support on worker nodes or not
-    Default: nogpu
+    Default: "false"
     AllowedValues:
-    - nogpu
-    - gpu
+    - "true"
+    - "false"
 
   NodeInstanceType:
     Description: Define EC2 instance type for EKS worker node
@@ -262,7 +262,6 @@ Resources:
       TemplateURL: ./worker.yaml
       Parameters:
         ClusterName: !Ref ClusterName
-        K8sVersion: !Ref K8sVersion
         PrivateSubnets:
           Fn::GetAtt:
           - Vpc
