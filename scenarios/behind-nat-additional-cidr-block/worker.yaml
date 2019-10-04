@@ -3,15 +3,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Amazon EKS - Node Group definition with support for Cluster Autoscaler'
 
 Parameters:
-  K8sVersion:
-    Type: String
-    Default: '11'
-    Description: Choose Kubernetes version 1.X
-    AllowedValues:
-    - '10'
-    - '11'
-    - '12'
-  
   NodeSecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Choose security group for worker node
@@ -26,73 +17,16 @@ Parameters:
 
   NodeGPUSupport:
     Type: String
-    Description: GPU support on worker nodes
-    Default: nogpu
+    Description: Choose whether to enable GPU support on worker nodes or not
+    Default: "false"
     AllowedValues:
-    - nogpu
-    - gpu
+    - "true"
+    - "false"
 
   NodeInstanceType:
     Description: EC2 instance type for the node instances
     Type: String
     Default: t2.medium
-    AllowedValues:
-    - t2.small
-    - t2.medium
-    - t2.large
-    - t2.xlarge
-    - t2.2xlarge
-    - m3.medium
-    - m3.large
-    - m3.xlarge
-    - m3.2xlarge
-    - m4.large
-    - m4.xlarge
-    - m4.2xlarge
-    - m4.4xlarge
-    - m4.10xlarge
-    - m5.large
-    - m5.xlarge
-    - m5.2xlarge
-    - m5.4xlarge
-    - m5.12xlarge
-    - m5.24xlarge
-    - c4.large
-    - c4.xlarge
-    - c4.2xlarge
-    - c4.4xlarge
-    - c4.8xlarge
-    - c5.large
-    - c5.xlarge
-    - c5.2xlarge
-    - c5.4xlarge
-    - c5.9xlarge
-    - c5.18xlarge
-    - i3.large
-    - i3.xlarge
-    - i3.2xlarge
-    - i3.4xlarge
-    - i3.8xlarge
-    - i3.16xlarge
-    - r3.xlarge
-    - r3.2xlarge
-    - r3.4xlarge
-    - r3.8xlarge
-    - r4.large
-    - r4.xlarge
-    - r4.2xlarge
-    - r4.4xlarge
-    - r4.8xlarge
-    - r4.16xlarge
-    - x1.16xlarge
-    - x1.32xlarge
-    - p2.xlarge
-    - p2.8xlarge
-    - p2.16xlarge
-    - p3.2xlarge
-    - p3.8xlarge
-    - p3.16xlarge
-    ConstraintDescription: Must be a valid EC2 instance type
 
   NodeAutoScalingGroupMinSize:
     Type: Number
@@ -117,129 +51,11 @@ Parameters:
     Description: Arguments to pass to the bootstrap script. See files/bootstrap.sh in https://github.com/awslabs/amazon-eks-ami
     Default: ""
     Type: String
-
-Mappings:
-  '12':
-    us-west-2:
-      nogpu: ami-0923e4b35a30a5f53
-      gpu: ami-0bebf2322fd52a42e
-    us-east-1:
-      nogpu: ami-0abcb9f9190e867ab
-      gpu: ami-0cb7959f92429410a
-    us-east-2:
-      nogpu: ami-04ea7cb66af82ae4a
-      gpu: ami-0118b61dc2312dee2
-    eu-central-1:
-      nogpu: ami-0d741ed58ca5b342e
-      gpu: ami-0c57db5b204001099
-    eu-north-1:
-      nogpu: ami-0c65a309fc58f6907
-      gpu: ami-09354b076296f5946
-    eu-west-1:
-      nogpu: ami-08716b70cac884aaa
-      gpu: ami-0fbc930681258db86
-    eu-west-2:
-      nogpu: ami-0c7388116d474ee10
-      gpu: ami-0d832fced2cfe0f7b
-    eu-west-3:
-      nogpu: ami-0560aea042fec8b12
-      gpu: ami-0f8fa088b406ebba2
-    ap-northeast-1:
-      nogpu: ami-0bfedee6a7845c26d
-      gpu: ami-08e41cc84f4b3f27f
-    ap-northeast-2:
-      nogpu: ami-0a904348b703e620c
-      gpu: ami-0c43b885e33fdc29e
-    ap-south-1:
-      nogpu: ami-09c3eb35bb3be46a4
-      gpu: ami-0d3ecaf4f3318c714
-    ap-southeast-1:
-      nogpu: ami-07b922b9b94d9a6d2
-      gpu: ami-0655b4dbbe2d46703
-    ap-southeast-2:
-      nogpu: ami-0f0121e9e64ebd3dc
-      gpu: ami-07079cd9ff1b312da
-  '11':
-    us-west-2:
-      nogpu: ami-05ecac759c81e0b0c
-      gpu: ami-08377056d89909b2a
-    us-east-1:
-      nogpu: ami-02c1de421df89c58d
-      gpu: ami-06ec2ea207616c078
-    us-east-2:
-      nogpu: ami-03b1b6cc34c010f9c
-      gpu: ami-0e6993a35aae3407b
-    eu-central-1:
-      nogpu: ami-0c2709025eb548246
-      gpu: ami-0bf09c13f4204ce9d
-    eu-north-1:
-      nogpu: ami-084bd3569d08c6e67
-      gpu: ami-0a1714bb5be631b59
-    eu-west-1:
-      nogpu: ami-0e82e73403dd69fa3
-      gpu: ami-0b4d0f56587640d5a
-    eu-west-2:
-      nogpu: ami-0da9aa88dd2ec8297
-      gpu: ami-00e98f9e6fd2319e5
-    eu-west-3:
-      nogpu: ami-099369bc73d1cc66f
-      gpu: ami-0039e2556e6290828
-    ap-northeast-1:
-      nogpu: ami-0d555d5f56c843803
-      gpu: ami-07fc636e8f6d3e18b
-    ap-northeast-2:
-      nogpu: ami-0144ae839b1111571
-      gpu: ami-002057772097fcef9
-    ap-south-1:
-      nogpu: ami-02071c0110dc365ba
-      gpu: ami-04fe7f4c75aac7196
-    ap-southeast-1:
-      nogpu: ami-00c91afdb73cf7f93
-      gpu: ami-08d5da0b12751a31f
-    ap-southeast-2:
-      nogpu: ami-05f4510fcfe56961c
-      gpu: ami-04024dd8e0b9e36ff
-  '10':
-    us-west-2:
-      nogpu: ami-05a71d034119ffc12
-      gpu: ami-0901518d7557125c8
-    us-east-1:
-      nogpu: ami-03a1e71fb42fc37dd
-      gpu: ami-00f74c3728d4ca27d
-    us-east-2:
-      nogpu: ami-093d55c2ba99ab2c8
-      gpu: ami-0a788defb66cdfffb
-    eu-central-1:
-      nogpu: ami-03bdf8079f6c013c5
-      gpu: ami-0a8536a894bd4ea06
-    eu-north-1:
-      nogpu: ami-0be77fe86d741fc81
-      gpu: ami-05baf7a6c293fe2ed
-    eu-west-1:
-      nogpu: ami-06368da7f495b68e9
-      gpu: ami-0f6f3929a9d7a418e
-    eu-west-2:
-      nogpu: ami-0f1f2189b4741bc60
-      gpu: ami-0a12396b818bc2383
-    eu-west-3:
-      nogpu: ami-03a9acb0f6e0d424d
-      gpu: ami-086d5edcaacd0ccfd
-    ap-northeast-1:
-      nogpu: ami-0c9fb6a3fda95d373
-      gpu: ami-073f06a1edd22ae2e
-    ap-northeast-2:
-      nogpu: ami-00ea4ea959f28b4cf
-      gpu: ami-0baff950f5217e54e
-    ap-south-1:
-      nogpu: ami-0f07478f5c5eb9e20
-      gpu: ami-033bd2c2a3431923e
-    ap-southeast-1:
-      nogpu: ami-05dac5d0ada75e22f
-      gpu: ami-09defa93988984fa1
-    ap-southeast-2:
-      nogpu: ami-00513f18e1900ce1e
-      gpu: ami-00d9364d705e902c9
-
+  
+  AmiID:
+    Description: AUTO GENERATED BY MAKE FILE, DO NOT CHANGE
+    Default: /aws/service/eks/optimized-ami/1.14/amazon-linux-2/recommended/image_id
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -248,7 +64,6 @@ Metadata:
           default: 'EKS Cluster Configurations'
         Parameters:
         - ClusterName
-        - K8sVersion
 
       - Label:
           default: 'VPC Configurations'
@@ -258,10 +73,10 @@ Metadata:
       - Label:
           default: 'Worker Node Configuration'
         Parameters:
+        - NodeGPUSupport
         - NodeAutoScalingGroupMinSize
         - NodeAutoScalingGroupMaxSize
         - NodeInstanceType
-        - NodeGPUSupport
         - NodeVolumeSize
         - BootstrapArguments
       
@@ -296,6 +111,8 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
         - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonElasticFileSystemReadOnlyAccess
       Policies:
       - PolicyName: cluster-autoscaler
         PolicyDocument:
@@ -309,6 +126,24 @@ Resources:
             - 'autoscaling:DescribeTags'
             - 'autoscaling:SetDesiredCapacity'
             - 'autoscaling:TerminateInstanceInAutoScalingGroup'
+            Resource: '*'
+      - PolicyName: cloudwatchlog-exporter
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'logs:CreateLogGroup'
+            - 'logs:CreateLogStream'
+            - 'logs:PutLogEvents'
+            Resource: '*'
+      - PolicyName: kube2iam-assume
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - 'sts:AssumeRole'
             Resource: '*'
 
   NodeGroup:
@@ -335,6 +170,9 @@ Resources:
       - Key: auto-delete
         Value: "no"
         PropagateAtLaunch: true
+      - Key: GPUSupport
+        Value: !Ref NodeGPUSupport
+        PropagateAtLaunch: true
     UpdatePolicy:
       AutoScalingRollingUpdate:
         MinInstancesInService: 1
@@ -345,11 +183,7 @@ Resources:
     Properties:
       AssociatePublicIpAddress: false
       IamInstanceProfile: !Ref NodeInstanceProfile
-      ImageId: 
-        Fn::FindInMap:
-        - !Ref K8sVersion
-        - !Ref AWS::Region
-        - !Ref NodeGPUSupport
+      ImageId: !Ref AmiID
       InstanceType: !Ref NodeInstanceType
       KeyName: !Ref KeyName
       SecurityGroups:
@@ -366,6 +200,22 @@ Resources:
             #!/bin/bash
             set -o xtrace
             /etc/eks/bootstrap.sh ${ClusterName} ${BootstrapArguments}
+
+            KUBELET_CONFIG=/etc/kubernetes/kubelet/kubelet-config.json
+            CURRENT_DNS_SERVERS=`jq ".clusterDNS[]" $KUBELET_CONFIG`
+            INTERNAL_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+            
+            ALL_DNS_IPS="\"$INTERNAL_IP\"";
+            
+            for host in $CURRENT_DNS_SERVERS; do
+              ALL_DNS_IPS="$ALL_DNS_IPS,$host";
+            done
+            
+            echo "$(jq ".clusterDNS=[$ALL_DNS_IPS]" $KUBELET_CONFIG)" > $KUBELET_CONFIG
+            
+            systemctl daemon-reload
+            systemctl restart kubelet
+
             /opt/aws/bin/cfn-signal --exit-code $? \
                      --stack  ${AWS::StackName} \
                      --resource NodeGroup  \

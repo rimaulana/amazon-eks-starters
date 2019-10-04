@@ -13,8 +13,9 @@ Parameters:
     Default: '11'
     Description: Choose Kubernetes version 1.X
     AllowedValues:
-    - '10'
     - '11'
+    - '12'
+    - '13'
 
   PrimaryVpcCidr:
     Type: String

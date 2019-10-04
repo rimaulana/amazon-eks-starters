@@ -8,8 +8,9 @@ Parameters:
     Default: '11'
     Description: Choose Kubernetes version 1.X
     AllowedValues:
-    - '10'
     - '11'
+    - '12'
+    - '13'
 
   VpcId:
     Type: AWS::EC2::VPC::Id
@@ -178,6 +179,9 @@ Metadata:
           default: "EC2 Instance Accessibility"
         Parameters:
         - KeyName
+
+Mappings:
+{{ .AmiList }}
 
 Resources:
   NodeInstanceProfile:
@@ -397,85 +401,3 @@ Outputs:
   NodeInstanceRole:
     Description: The node instance role
     Value: !GetAtt NodeInstanceRole.Arn
-
-Mappings:
-  '11':
-    us-west-2:
-      nogpu: ami-0c28139856aaf9c3b
-      gpu: ami-06045aa686f46dd58
-    us-east-1:
-      nogpu: ami-0eeeef929db40543c
-      gpu: ami-0558da965e2fc68b0
-    us-east-2:
-      nogpu: ami-0484545fe7d3da96f
-      gpu: ami-0c3afad2ea917168e
-    eu-central-1:
-      nogpu: ami-032ed5525d4df2de3
-      gpu: ami-0939712219b80b525
-    eu-north-1:
-      nogpu: ami-0154b2479ba20f8bb
-      gpu: ami-18bf3666
-    eu-west-1:
-      nogpu: ami-098fb7e9b507904e7
-      gpu: ami-014969e8d07b2fc9f
-    eu-west-2:
-      nogpu: ami-0d69ab00cb41d6eda
-      gpu: ami-0bb14a7e038ad534c
-    eu-west-3:
-      nogpu: ami-018ebb030cf6ae00b
-      gpu: ami-0a3db0dbd972b38f2
-    ap-northeast-1:
-      nogpu: ami-07fdc9272ce5b0ce5
-      gpu: ami-0880d3b662781d6d6
-    ap-northeast-2:
-      nogpu: ami-091e0e1906e653417
-      gpu: ami-0c3db49d90afa0f1e
-    ap-south-1:
-      nogpu: ami-0b6f791fc54125a8a
-      gpu: ami-00b37b9a91efc5fff
-    ap-southeast-1:
-      nogpu: ami-038d55c26bf01998f
-      gpu: ami-0c903ead334faa6a3
-    ap-southeast-2:
-      nogpu: ami-0e07b5081bb77d540
-      gpu: ami-02d7e0f064bd7d8e0
-  '10':
-    us-west-2:
-      nogpu: ami-0e7ee8863c8536cce
-      gpu: ami-02e0b615d7749e016
-    us-east-1:
-      nogpu: ami-09a7630ca9ee4ee22
-      gpu: ami-00cce60e4c241de4c
-    us-east-2:
-      nogpu: ami-02a8a05e480e902e2
-      gpu: ami-0bbfeb020c5ec10ee
-    eu-central-1:
-      nogpu: ami-0b8d223ce03e6fabc
-      gpu: ami-0c1746c6d5d61b4d3
-    eu-north-1:
-      nogpu: ami-09be5053dbb1a515d
-      gpu: ami-63aa231d
-    eu-west-1:
-      nogpu: ami-0103822d44fc52f97
-      gpu: ami-08d23ed2de9320c90
-    eu-west-2:
-      nogpu: ami-017c4d847b606e125
-      gpu: ami-0f136e808b9365a1c
-    eu-west-3:
-      nogpu: ami-0c7fc5c0784b58207
-      gpu: ami-0b6c4fac3cdcc191d
-    ap-northeast-1:
-      nogpu: ami-0e831f9f650f2f8ab
-      gpu: ami-061f5b653b1a98557
-    ap-northeast-2:
-      nogpu: ami-0378f1fac83cbf438
-      gpu: ami-0a8159b97b9a7e078
-    ap-south-1:
-      nogpu: ami-0ac369c3b2206d2ea
-      gpu: ami-03ba4c3cea82ce746
-    ap-southeast-1:
-      nogpu: ami-0fa3f3282eb89b795
-      gpu: ami-02aa3e8ad27163456
-    ap-southeast-2:
-      nogpu: ami-01d0ab2e9506b8db0
-      gpu: ami-0679fa5d74309eb79
